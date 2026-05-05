@@ -32,6 +32,8 @@ static NSInteger DKSTCandidateIndexForNumberKeyCode(unsigned short keyCode) {
 
 @implementation InputController
 
+static IMKCandidates *DKSTSharedCandidatesForMacOS26;
+
 - (id)initWithServer:(IMKServer *)server
             delegate:(id)delegate
               client:(id)inputClient {
@@ -63,10 +65,24 @@ static NSInteger DKSTCandidateIndexForNumberKeyCode(unsigned short keyCode) {
       DKSTLog(@"Initialized for Preferences App");
     }
 
-    // Always create IMKCandidates for all clients
-    _candidates = [[IMKCandidates alloc]
-        initWithServer:server
-             panelType:kIMKSingleColumnScrollingCandidatePanel];
+    // Always keep IMKCandidates available for all clients. On macOS 26 beta,
+    // InputMethodKit may keep using the object after controller dealloc, so
+    // reuse one process-wide instance instead of leaking one per controller.
+    if (@available(macOS 26, *)) {
+      @synchronized([InputController class]) {
+        if (!DKSTSharedCandidatesForMacOS26) {
+          DKSTSharedCandidatesForMacOS26 =
+              [[IMKCandidates alloc]
+                  initWithServer:server
+                       panelType:kIMKSingleColumnScrollingCandidatePanel];
+        }
+        _candidates = DKSTSharedCandidatesForMacOS26;
+      }
+    } else {
+      _candidates = [[IMKCandidates alloc]
+          initWithServer:server
+               panelType:kIMKSingleColumnScrollingCandidatePanel];
+    }
     _lastClientSyncTime = 0;
     _directInputComposedLength = 0;
     _directInputComposedRange = NSMakeRange(NSNotFound, 0);
@@ -108,11 +124,11 @@ static NSInteger DKSTCandidateIndexForNumberKeyCode(unsigned short keyCode) {
   DKSTLog(@"InputController dealloc called");
 
   // InputMethodKit on macOS 26 beta internally caches a reference to the
-  // IMKCandidates object and may call methods on it (like isVisible) after
-  // our dealloc is called. On macOS 26+, skip release to avoid
-  // use-after-free crash in deactivateServer_Common.
+  // IMKCandidates object and may call methods on it after our dealloc is
+  // called. The shared instance is intentionally kept alive for the process,
+  // which avoids a per-controller leak while preserving the crash workaround.
   if (@available(macOS 26, *)) {
-    // Skip: InputMethodKit manages _candidates lifetime on macOS 26+
+    _candidates = nil;
   } else {
     if (_candidates) {
       [_candidates release];
