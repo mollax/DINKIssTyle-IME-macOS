@@ -135,14 +135,23 @@ Mac의 고유한 사용 경험을 유지합니다.
 
 **[macOS용 DKST 한글입력기 환경설정 설명](Preferences.md)** 에서 상세 사용법을 확인하세요.
 
+---
+
+
+<div align="center">
+<img src="docs/star.png" alt="" width="320"><br>
+  이 프로젝트가 유용하셨다면, Star를 눌러 응원해주세요.<br><br>
+</div>
+
+
+#### 이 README.md 파일은 DKST Markdown으로 작성되었습니다. DKST Markdown에 대하여 관심있으시다면 아래 배지를 클릭하세요.
+<div align="center">
+<a href="https://github.com/DINKIssTyle/DINKIssTyle-Markdown-Browser" target="_blank"><img src="https://github.com/DINKIssTyle/DINKIssTyle-Markdown-Browser/blob/main/DKST-Markdown.png?raw=true" width="150"></a><br>
+</div>
+
 ## 감사 인사. ##
 
 AI의 시대가 도래한 덕분에 macOS용 한글 입력기를 직접 제작하게 되었습니다. 애플이 로제타2를 제거하는 시점에 다다르면서, 15년간 macOS의 열악했던 한글 입력 환경 속에서 묵묵히 저의 한글 입력을 도왔던 `한글입력기 바람` (https://baramim.blogspot.com) 을 이제는 떠나보내야 할 때가 왔기 때문입니다. 한글입력기 바람은 제 맥 라이프에서 산소처럼 소중한 동반자였습니다. 고마웠어요. 바람 입력기!
 
 ---
 © 2026 DINKI'ssTyle. All rights reserved.
-
-<div align="center"><br>
-<a href="https://github.com/DINKIssTyle/DINKIssTyle-Markdown-Browser" target="_blank"><img src="https://github.com/DINKIssTyle/DINKIssTyle-Markdown-Browser/blob/main/DKST-Markdown.png?raw=true" width="150"></a><br>
-</div>
-
