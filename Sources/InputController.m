@@ -95,6 +95,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     _markedTextCommittedPrefix = [[NSMutableString alloc] init];
     _hanjaMarkedPrefixLength = 0;
     _hanjaReplacementUsesMarkedPrefix = NO;
+    _compositionState = [[DKSTCompositionState alloc] init];
 
     [self reloadUserPreferences];
     [[NSNotificationCenter defaultCenter]
@@ -176,6 +177,10 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   if (_markedTextCommittedPrefix) {
     [_markedTextCommittedPrefix release];
     _markedTextCommittedPrefix = nil;
+  }
+  if (_compositionState) {
+    [_compositionState release];
+    _compositionState = nil;
   }
   // (observers already removed at top of dealloc)
   [super dealloc];
@@ -663,6 +668,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   [_markedTextCommittedPrefix setString:@""];
   _hanjaMarkedPrefixLength = 0;
   _hanjaReplacementUsesMarkedPrefix = NO;
+  [_compositionState reset];
 }
 
 - (BOOL)hasPendingComposition {
@@ -1282,6 +1288,19 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
         NSMakeRange(replacementStart + commitLength, composedLength);
   } else {
     _directInputComposedRange = NSMakeRange(NSNotFound, 0);
+  }
+  [_compositionState updateBufferContents:replacement];
+  [_compositionState noteInsertedTextWithReplacementRange:replacementRange
+                                        insertionLocation:replacementStart
+                                          committedLength:commitLength
+                                           composedLength:composedLength];
+  if (!NSEqualRanges([_compositionState inlineRange],
+                     _directInputComposedRange)) {
+    DKSTLog(@"CompositionState shadow inline mismatch state=(%lu,%lu) direct=(%lu,%lu)",
+            (unsigned long)[_compositionState inlineRange].location,
+            (unsigned long)[_compositionState inlineRange].length,
+            (unsigned long)_directInputComposedRange.location,
+            (unsigned long)_directInputComposedRange.length);
   }
   _markedReplacementRange = NSMakeRange(NSNotFound, 0);
   [self rememberSelectedRangeForClient:sender];

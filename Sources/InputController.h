@@ -1,4 +1,5 @@
 #import "DKSTHangul.h"
+#import "DKSTCompositionState.h"
 #import <Cocoa/Cocoa.h>
 #import <InputMethodKit/InputMethodKit.h>
 
@@ -27,6 +28,7 @@
   NSMutableString *_markedTextCommittedPrefix;
   NSUInteger _hanjaMarkedPrefixLength;
   BOOL _hanjaReplacementUsesMarkedPrefix;
+  DKSTCompositionState *_compositionState;
 }
 
 - (void)updateComposition:(id)sender;
