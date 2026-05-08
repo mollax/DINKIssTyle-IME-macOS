@@ -35,5 +35,6 @@
 - (BOOL)shouldFallbackForSelectedRange:(NSRange)selectedRange
                       expectedLocation:(NSUInteger)expectedLocation;
 - (void)markReplacementRange:(NSRange)range;
+- (void)clearReplacementRange;
 
 @end

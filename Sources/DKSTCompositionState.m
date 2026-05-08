@@ -144,4 +144,8 @@
   _previousBufferContents = nil;
 }
 
+- (void)clearReplacementRange {
+  _replacementRange = NSMakeRange(NSNotFound, 0);
+}
+
 @end

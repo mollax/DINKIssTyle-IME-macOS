@@ -139,7 +139,11 @@ static void testResetAndMarkedReplacement(void) {
               @"marked replacement range is stored");
   ASSERT_STR([state bufferContents], @"(nil)",
              @"marking replacement clears buffer contents");
+  [state clearReplacementRange];
+  assertRange([state replacementRange], NSMakeRange(NSNotFound, 0),
+              @"clearReplacementRange clears only replacement range");
 
+  [state markReplacementRange:NSMakeRange(4, 2)];
   [state reset];
   assertRange([state inlineRange], NSMakeRange(NSNotFound, 0),
               @"reset clears inline range");

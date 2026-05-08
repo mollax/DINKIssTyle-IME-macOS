@@ -44,6 +44,8 @@
 - (void)syncInputClient:(id)sender force:(BOOL)force;
 - (void)resetCompositionState;
 - (BOOL)hasPendingComposition;
+- (void)setMarkedReplacementRange:(NSRange)range;
+- (void)clearMarkedReplacementRange;
 - (void)rememberSelectedRangeForClient:(id)sender;
 - (void)prepareForInputClient:(id)sender;
 - (NSRange)directInputReplacementRange:(id)sender;
@@ -61,6 +63,7 @@
 - (BOOL)shouldUseMarkedTextForClient:(id)sender;
 - (BOOL)bundleIdentifierUsesWebKitTextStack:(NSString *)bundleID;
 - (BOOL)shouldAvoidEagerSyncForClient:(id)sender;
+- (BOOL)shouldTrustDirectCompositionRangeForClient:(id)sender;
 - (BOOL)bundleIdentifierUsesChromiumMarkedTextPolicy:(NSString *)bundleID;
 - (BOOL)runningApplicationUsesChromiumTextStack:(NSString *)bundleID;
 - (BOOL)applicationBundleUsesChromiumTextStack:(NSURL *)bundleURL;

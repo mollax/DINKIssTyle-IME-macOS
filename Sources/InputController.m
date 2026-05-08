@@ -238,6 +238,11 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   return [self bundleIdentifierUsesWebKitTextStack:bundleID];
 }
 
+- (BOOL)shouldTrustDirectCompositionRangeForClient:(id)sender {
+  NSString *bundleID = [self bundleIdentifierForClient:sender];
+  return [self bundleIdentifierUsesWebKitTextStack:bundleID];
+}
+
 - (BOOL)bundleIdentifierUsesChromiumMarkedTextPolicy:(NSString *)bundleID {
   if (![bundleID length]) {
     return NO;
@@ -339,6 +344,11 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     return _directInputComposedRange;
   }
 
+  if ([self shouldTrustDirectCompositionRangeForClient:sender] &&
+      _directInputComposedRange.location != NSNotFound) {
+    return _directInputComposedRange;
+  }
+
   @try {
     NSRange selectedRange = [sender selectedRange];
     if (selectedRange.location != NSNotFound &&
@@ -362,8 +372,9 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   if (_directInputComposedLength > 0) {
     return [self directInputReplacementRange:sender];
   }
-  if (_markedReplacementRange.location != NSNotFound) {
-    return _markedReplacementRange;
+  NSRange markedReplacementRange = [_compositionState replacementRange];
+  if (markedReplacementRange.location != NSNotFound) {
+    return markedReplacementRange;
   }
 
   NSString *composed = [engine composedString];
@@ -535,7 +546,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   }
   _currentHanjaCandidates = [allCandidates retain];
   _selectedTextRange = replacementRange;
-  _markedReplacementRange = replacementRange;
+  [self setMarkedReplacementRange:replacementRange];
 
   DKSTLog(@"Candidates for '%@': count=%lu range=(%lu,%lu)", text,
           (unsigned long)[allCandidates count],
@@ -646,9 +657,14 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     return;
   }
 
+  if ([self shouldAvoidEagerSyncForClient:sender]) {
+    _lastClientSyncTime = now;
+    return;
+  }
+
   @try {
     [sender overrideKeyboardWithKeyboardNamed:kUSKeylayout];
-    if (force && ![self shouldAvoidEagerSyncForClient:sender]) {
+    if (force) {
       [sender selectInputMode:currentMode];
     }
     _lastClientSyncTime = now;
@@ -675,6 +691,19 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   return [[engine composedString] length] > 0 ||
           _directInputComposedLength > 0 ||
           _markedReplacementRange.location != NSNotFound;
+}
+
+- (void)setMarkedReplacementRange:(NSRange)range {
+  _markedReplacementRange = range;
+  if (range.location == NSNotFound) {
+    [_compositionState clearReplacementRange];
+  } else {
+    [_compositionState markReplacementRange:range];
+  }
+}
+
+- (void)clearMarkedReplacementRange {
+  [self setMarkedReplacementRange:NSMakeRange(NSNotFound, 0)];
 }
 
 - (void)rememberSelectedRangeForClient:(id)sender {
@@ -1147,7 +1176,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
             _directInputComposedLength > 0) {
           _directInputComposedLength = 0;
           _directInputComposedRange = NSMakeRange(NSNotFound, 0);
-          _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+          [self clearMarkedReplacementRange];
           return NO;
         }
       }
@@ -1202,7 +1231,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
         replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
   }
 
-  _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+  [self clearMarkedReplacementRange];
   [self rememberSelectedRangeForClient:sender];
 }
 
@@ -1225,7 +1254,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     [sender setMarkedText:@""
            selectionRange:NSMakeRange(0, 0)
          replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
-    _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+    [self clearMarkedReplacementRange];
     [self rememberSelectedRangeForClient:sender];
   }
 }
@@ -1266,7 +1295,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     expectedLocation = replacementStart + commitLength + composedLength;
   }
 
-  if (expectedLocation != NSNotFound && composedLength > 0) {
+  if (expectedLocation != NSNotFound && composedLength > 0 &&
+      ![self shouldTrustDirectCompositionRangeForClient:sender]) {
     @try {
       NSRange selectedRange = [sender selectedRange];
       if (selectedRange.location == NSNotFound ||
@@ -1289,7 +1319,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
                                            composedLength:composedLength];
   _directInputComposedLength = composedLength;
   _directInputComposedRange = [_compositionState inlineRange];
-  _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+  [self clearMarkedReplacementRange];
   [self rememberSelectedRangeForClient:sender];
 }
 
@@ -1297,7 +1327,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   if (_useMarkedTextForClient) {
     if (_markedReplacementRange.location == NSNotFound &&
         _directInputComposedRange.location != NSNotFound) {
-      _markedReplacementRange = _directInputComposedRange;
+      [self setMarkedReplacementRange:_directInputComposedRange];
     }
     _directInputComposedLength = 0;
     _directInputComposedRange = NSMakeRange(NSNotFound, 0);
@@ -1319,7 +1349,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     [engine reset];
     _directInputComposedLength = 0;
     _directInputComposedRange = NSMakeRange(NSNotFound, 0);
-    _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+    [self clearMarkedReplacementRange];
     [_markedTextCommittedPrefix setString:@""];
     [sender setMarkedText:@""
            selectionRange:NSMakeRange(0, 0)
@@ -1358,7 +1388,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   [engine reset];
   _directInputComposedLength = 0;
   _directInputComposedRange = NSMakeRange(NSNotFound, 0);
-  _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+  [self clearMarkedReplacementRange];
   [_markedTextCommittedPrefix setString:@""];
   [sender setMarkedText:@""
          selectionRange:NSMakeRange(0, 0)
@@ -1551,7 +1581,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       [engine reset];
       _directInputComposedLength = 0;
       _directInputComposedRange = NSMakeRange(NSNotFound, 0);
-      _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+      [self clearMarkedReplacementRange];
     } else {
       DKSTLog(@"Failed to extract hanja from '%@'", selected);
     }
@@ -1561,7 +1591,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
   // Reset selected range
   _selectedTextRange = NSMakeRange(NSNotFound, 0);
-  _markedReplacementRange = NSMakeRange(NSNotFound, 0);
+  [self clearMarkedReplacementRange];
   [_markedTextCommittedPrefix setString:@""];
   _hanjaMarkedPrefixLength = 0;
   _hanjaReplacementUsesMarkedPrefix = NO;
