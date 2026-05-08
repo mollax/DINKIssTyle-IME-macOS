@@ -14,6 +14,7 @@
                    keyCode:(unsigned short)keyCode
                     client:(id)sender
         candidatesVisible:(BOOL)candidatesVisible;
+- (BOOL)directInputRangeIsCurrent:(NSRange)range client:(id)sender;
 @end
 
 static NSInteger DKSTCandidateIndexForNumberKeyCode(unsigned short keyCode) {
@@ -379,13 +380,47 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   return NO;
 }
 
+- (BOOL)directInputRangeIsCurrent:(NSRange)range client:(id)sender {
+  if (!sender || range.location == NSNotFound ||
+      range.length != _directInputComposedLength ||
+      _directInputComposedLength == 0) {
+    return NO;
+  }
+
+  if (NSMaxRange(range) < range.location) {
+    return NO;
+  }
+
+  @try {
+    if ([sender respondsToSelector:@selector(selectedRange)]) {
+      NSRange selectedRange = [sender selectedRange];
+      if (selectedRange.location != NSNotFound &&
+          selectedRange.length == 0 &&
+          selectedRange.location < NSMaxRange(range)) {
+        return NO;
+      }
+    }
+
+    if ([sender respondsToSelector:@selector(attributedSubstringFromRange:)]) {
+      [sender attributedSubstringFromRange:range];
+    }
+  } @catch (NSException *exception) {
+    DKSTLog(@"Stale direct input range %@: %@",
+            NSStringFromRange(range), exception);
+    return NO;
+  }
+
+  return YES;
+}
+
 - (NSRange)directInputReplacementRange:(id)sender {
   if (_directInputComposedLength == 0 || !sender) {
     return _directInputComposedRange;
   }
 
   if ([self shouldTrustDirectCompositionRangeForClient:sender] &&
-      _directInputComposedRange.location != NSNotFound) {
+      [self directInputRangeIsCurrent:_directInputComposedRange
+                               client:sender]) {
     return _directInputComposedRange;
   }
 
@@ -401,7 +436,18 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     DKSTLog(@"Exception in directInputReplacementRange: %@", exception);
   }
 
-  return _directInputComposedRange;
+  if ([self directInputRangeIsCurrent:_directInputComposedRange
+                               client:sender]) {
+    return _directInputComposedRange;
+  }
+
+  DKSTLog(@"Dropping stale direct input range %@",
+          NSStringFromRange(_directInputComposedRange));
+  _directInputComposedLength = 0;
+  _directInputComposedRange = NSMakeRange(NSNotFound, 0);
+  [self clearMarkedReplacementRange];
+  [_compositionState resetTransientRanges];
+  return NSMakeRange(NSNotFound, 0);
 }
 
 - (NSRange)compositionReplacementRange:(id)sender {
@@ -809,7 +855,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       NSRange selectedRange = [sender selectedRange];
       if (selectedRange.location != NSNotFound &&
           !NSEqualRanges(selectedRange, _lastClientSelectedRange)) {
-        DKSTLog(@"Selection changed during composition; clearing pending composition");
+        DKSTLog(@"Selection changed during composition; next key starts a new direct composition");
         [self resetCompositionState];
         [sender setMarkedText:@""
                selectionRange:NSMakeRange(0, 0)
