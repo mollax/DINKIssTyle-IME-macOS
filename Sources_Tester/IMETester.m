@@ -72,7 +72,6 @@ static BOOL DKSTTextContainsRomanOrIsolatedJamo(NSString *text) {
   NSTextField *_sampleField;
   NSTextField *_cpuField;
   NSTextField *_singleLineField;
-  NSSecureTextField *_secureField;
   NSSearchField *_searchField;
   NSComboBox *_comboBox;
   NSTokenField *_tokenField;
@@ -354,16 +353,10 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
       [[NSTextField alloc] initWithFrame:NSMakeRect(20, 574, 260, 28)];
   [content addSubview:_singleLineField];
 
-  [content addSubview:[self labelWithString:@"NSSecureTextField"
-                                      frame:NSMakeRect(300, 602, 160, 18)]];
-  _secureField =
-      [[NSSecureTextField alloc] initWithFrame:NSMakeRect(300, 574, 260, 28)];
-  [content addSubview:_secureField];
-
   [content addSubview:[self labelWithString:@"NSSearchField"
-                                      frame:NSMakeRect(580, 602, 140, 18)]];
+                                      frame:NSMakeRect(300, 602, 140, 18)]];
   _searchField =
-      [[NSSearchField alloc] initWithFrame:NSMakeRect(580, 574, 320, 28)];
+      [[NSSearchField alloc] initWithFrame:NSMakeRect(300, 574, 260, 28)];
   [content addSubview:_searchField];
 
   [content addSubview:[self labelWithString:@"NSComboBox"
@@ -471,7 +464,6 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
   [_sampleField release];
   [_cpuField release];
   [_singleLineField release];
-  [_secureField release];
   [_searchField release];
   [_comboBox release];
   [_tokenField release];
@@ -538,7 +530,6 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
 
 - (void)clearAll:(id)sender {
   [_singleLineField setStringValue:@""];
-  [_secureField setStringValue:@""];
   [_searchField setStringValue:@""];
   [_comboBox setStringValue:@""];
   [_tokenField setStringValue:@""];
@@ -622,13 +613,12 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
 - (NSString *)autoTargetName {
   switch (_autoTargetIndex) {
   case 0: return @"NSTextField";
-  case 1: return @"NSSecureTextField";
-  case 2: return @"NSSearchField";
-  case 3: return @"NSComboBox";
-  case 4: return @"NSTokenField";
-  case 5: return @"Logging NSTextView";
-  case 6: return @"Plain NSTextView";
-  case 7: return @"WKWebView";
+  case 1: return @"NSSearchField";
+  case 2: return @"NSComboBox";
+  case 3: return @"NSTokenField";
+  case 4: return @"Logging NSTextView";
+  case 5: return @"Plain NSTextView";
+  case 6: return @"WKWebView";
   default: return @"Unknown";
   }
 }
@@ -639,13 +629,12 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
 
   switch (_autoTargetIndex) {
   case 0: [_window makeFirstResponder:_singleLineField]; break;
-  case 1: [_window makeFirstResponder:_secureField]; break;
-  case 2: [_window makeFirstResponder:_searchField]; break;
-  case 3: [_window makeFirstResponder:_comboBox]; break;
-  case 4: [_window makeFirstResponder:_tokenField]; break;
-  case 5: [_window makeFirstResponder:_loggingTextView]; break;
-  case 6: [_window makeFirstResponder:_plainTextView]; break;
-  case 7:
+  case 1: [_window makeFirstResponder:_searchField]; break;
+  case 2: [_window makeFirstResponder:_comboBox]; break;
+  case 3: [_window makeFirstResponder:_tokenField]; break;
+  case 4: [_window makeFirstResponder:_loggingTextView]; break;
+  case 5: [_window makeFirstResponder:_plainTextView]; break;
+  case 6:
     [_window makeFirstResponder:_webView];
     [_webView evaluateJavaScript:@"document.getElementById('e').focus();"
                completionHandler:nil];
@@ -667,7 +656,7 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
   if (!_autoRunning) return;
 
   NSArray *samples = [self autoSamples];
-  if (_autoTargetIndex >= 8) {
+  if (_autoTargetIndex >= 7) {
     [self reportAutoTypingResults];
     _autoRepeatIndex++;
     if (_autoRepeatIndex < _autoRepeatCount) {
@@ -698,7 +687,7 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
     _autoTargetIndex++;
     _autoSampleIndex = 0;
     _autoCharacterIndex = 0;
-    if (_autoTargetIndex >= 8) {
+    if (_autoTargetIndex >= 7) {
       [self typeNextAutoCharacter];
       return;
     }
@@ -818,8 +807,6 @@ static BOOL DKSTKeyCodeForCharacter(unichar character, CGKeyCode *keyCode) {
   [self reportText:[_singleLineField stringValue]
          forTarget:@"NSTextField"
           expected:expected];
-  DKSTAppendLog(@"INFO pass %ld NSSecureTextField skipped result comparison",
-                (long)(_autoRepeatIndex + 1));
   [self reportText:[_searchField stringValue]
          forTarget:@"NSSearchField"
           expected:expected];
