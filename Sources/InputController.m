@@ -243,9 +243,10 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 }
 
 - (NSString *)bundleIdentifierForClient:(id)sender {
-  id cacheClient = sender ?: [self client];
-  if (cacheClient && cacheClient == _lastBundleIdentifierClient &&
-      [_lastInputClientBundleID length] > 0) {
+  // IMK clients are XPC proxies, so bundleIdentifier can cross process
+  // boundaries. Cache it for this activation and clear it in activateServer:
+  // to keep the hot key path from paying that IPC cost repeatedly.
+  if ([_lastInputClientBundleID length] > 0) {
     return _lastInputClientBundleID;
   }
 
@@ -264,7 +265,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
   [_lastInputClientBundleID release];
   _lastInputClientBundleID = [bundleID copy];
-  _lastBundleIdentifierClient = cacheClient;
+  _lastBundleIdentifierClient = nil;
 
   return bundleID;
 }
@@ -399,6 +400,15 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     return NO;
   }
 
+  // The fallback Chromium check can enumerate running apps and inspect bundle
+  // frameworks on disk. Cache both YES and NO by bundle ID so first-key policy
+  // detection does not repeatedly block the input path.
+  NSString *cacheKey = [@"bundle:" stringByAppendingString:bundleID];
+  NSNumber *cachedResult = [_chromiumDetectionCache objectForKey:cacheKey];
+  if (cachedResult) {
+    return [cachedResult boolValue];
+  }
+
   NSArray *runningApps =
       [NSRunningApplication runningApplicationsWithBundleIdentifier:bundleID];
   for (NSRunningApplication *app in runningApps) {
@@ -412,14 +422,20 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
         [bundleName isEqualToString:@"atlas"] ||
         [appName isEqualToString:@"chatgpt atlas"] ||
         [bundleName isEqualToString:@"chatgpt atlas"]) {
+      [_chromiumDetectionCache setObject:[NSNumber numberWithBool:YES]
+                                  forKey:cacheKey];
       return YES;
     }
 
     if ([self applicationBundleUsesChromiumTextStack:[app bundleURL]]) {
+      [_chromiumDetectionCache setObject:[NSNumber numberWithBool:YES]
+                                  forKey:cacheKey];
       return YES;
     }
   }
 
+  [_chromiumDetectionCache setObject:[NSNumber numberWithBool:NO]
+                              forKey:cacheKey];
   return NO;
 }
 
@@ -1061,6 +1077,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   [super activateServer:sender];
 
   _lastInputClient = sender;
+  [_lastInputClientBundleID release];
+  _lastInputClientBundleID = nil;
 
   // Force keyboard override and input mode selection.
   // Reset sync time to ensure override is re-applied even if the XPC
@@ -1280,13 +1298,18 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   NSRange selectedRangeBefore = NSMakeRange(NSNotFound, 0);
   if (_useMarkedTextForClient) {
     previousComposedLength = [[engine composedString] length];
-    @try {
-      if ([sender respondsToSelector:@selector(selectedRange)]) {
-        selectedRangeBefore = [sender selectedRange];
+    // The roman-leak repair only runs when a new marked composition starts.
+    // selectedRange is another IPC call, so skip it while a composition is
+    // already active and the captured range would be ignored anyway.
+    if (previousComposedLength == 0) {
+      @try {
+        if ([sender respondsToSelector:@selector(selectedRange)]) {
+          selectedRangeBefore = [sender selectedRange];
+        }
+      } @catch (NSException *exception) {
+        DKSTLog(@"Exception checking selected range before input: %@",
+                exception);
       }
-    } @catch (NSException *exception) {
-      DKSTLog(@"Exception checking selected range before input: %@",
-              exception);
     }
   }
 
