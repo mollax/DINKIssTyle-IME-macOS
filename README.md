@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="docs/DKST_video.gif" alt="Video Demo" width="90%">
-</p>
-
-<p align="center"><br>
+<p align="center"><br><br>
   <img src="docs/Main_img.png" alt="Icon Image" width="96">
 </p>
 
