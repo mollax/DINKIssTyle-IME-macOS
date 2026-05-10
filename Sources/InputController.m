@@ -103,8 +103,28 @@ static NSString *DKSTRomanStringForHangulKeyCode(unsigned short keyCode,
     return shift ? @"N" : @"n";
   case 46:
     return shift ? @"M" : @"m";
-  default:
-    return nil;
+  case 50: return shift ? @"~" : @"`";
+  case kDKSTKeyCodeNum1: return shift ? @"!" : @"1";
+  case kDKSTKeyCodeNum2: return shift ? @"@" : @"2";
+  case kDKSTKeyCodeNum3: return shift ? @"#" : @"3";
+  case kDKSTKeyCodeNum4: return shift ? @"$" : @"4";
+  case kDKSTKeyCodeNum5: return shift ? @"%" : @"5";
+  case kDKSTKeyCodeNum6: return shift ? @"^" : @"6";
+  case kDKSTKeyCodeNum7: return shift ? @"&" : @"7";
+  case kDKSTKeyCodeNum8: return shift ? @"*" : @"8";
+  case kDKSTKeyCodeNum9: return shift ? @"(" : @"9";
+  case kDKSTKeyCodeNum0: return shift ? @")" : @"0";
+  case 27: return shift ? @"_" : @"-";
+  case 24: return shift ? @"+" : @"=";
+  case 33: return shift ? @"{" : @"[";
+  case 30: return shift ? @"}" : @"]";
+  case 42: return shift ? @"|" : @"\\";
+  case 41: return shift ? @":" : @";";
+  case 39: return shift ? @"\"" : @"'";
+  case 44: return shift ? @"?" : @"/";
+  case 43: return shift ? @"<" : @",";
+  case 47: return shift ? @">" : @".";
+  default: return nil;
   }
 }
 
@@ -178,6 +198,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       @"EnableMoaJjiki" : @YES,
       @"FullCharacterDelete" : @NO,
       @"EnableCustomShift" : @NO,
+      kDKSTHangulKeyboardLayoutKey : kDKSTHangulKeyboardLayoutDubeolsik,
       kDKSTUseMarkedTextForAllAppsKey : @NO,
       kDKSTUseAppleHanjaDictionaryKey : @YES,
       kDKSTMarkedTextAppBundleIDsKey : DKSTDefaultMarkedTextAppBundleIDs()
@@ -966,6 +987,29 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   case 45: // n
   case 46: // m
     return YES;
+  case 18: // 1
+  case 19: // 2
+  case 20: // 3
+  case 21: // 4
+  case 22: // 6
+  case 23: // 5
+  case 25: // 9
+  case 26: // 7
+  case 28: // 8
+  case 29: // 0
+  case 39: // '
+  case 41: // ;
+  case 43: // ,
+  case 44: // /
+  case 47: // .
+    return _hangulKeyboardLayout != DKSTHangulKeyboardLayoutDubeolsik;
+  case 24: // =
+  case 27: // -
+  case 30: // ]
+  case 33: // [
+  case 42: // backslash
+  case 50: // `
+    return _hangulKeyboardLayout == DKSTHangulKeyboardLayoutSebeolsikFinal;
   default:
     return NO;
   }
@@ -1169,6 +1213,18 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
   _fullCharacterDeleteEnabled = [defaults boolForKey:@"FullCharacterDelete"];
   [engine setFullCharacterDelete:_fullCharacterDeleteEnabled];
+
+  NSString *hangulKeyboardLayout =
+      [defaults stringForKey:kDKSTHangulKeyboardLayoutKey];
+  if ([hangulKeyboardLayout isEqualToString:kDKSTHangulKeyboardLayoutSebeolsik]) {
+    _hangulKeyboardLayout = DKSTHangulKeyboardLayoutSebeolsikFinal;
+  } else if ([hangulKeyboardLayout
+                 isEqualToString:kDKSTHangulKeyboardLayoutSebeolsik390]) {
+    _hangulKeyboardLayout = DKSTHangulKeyboardLayoutSebeolsik390;
+  } else {
+    _hangulKeyboardLayout = DKSTHangulKeyboardLayoutDubeolsik;
+  }
+  [engine setKeyboardLayout:_hangulKeyboardLayout];
 
   _customShiftEnabled = [defaults boolForKey:@"EnableCustomShift"];
   _useMarkedTextForAllApps =
@@ -1456,7 +1512,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 - (BOOL)handleCustomShift:(unsigned short)keyCode
                 modifiers:(NSUInteger)modifiers
                    client:(id)sender {
-  if (!_customShiftEnabled || modifiers != NSEventModifierFlagShift) {
+  if (!_customShiftEnabled || modifiers != NSEventModifierFlagShift ||
+      _hangulKeyboardLayout != DKSTHangulKeyboardLayoutDubeolsik) {
     return NO;
   }
 
