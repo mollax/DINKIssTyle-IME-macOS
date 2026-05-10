@@ -787,20 +787,15 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     return YES;
   }
 
-  @try {
-    if (![sender respondsToSelector:@selector(selectedRange)]) {
-      return YES;
-    }
-    NSRange selectedRange = [sender selectedRange];
-    if (selectedRange.location == NSNotFound) {
-      return YES;
-    }
-  } @catch (NSException *exception) {
-    DKSTLog(@"Exception checking selected range for direct input: %@",
-            exception);
+  if (![sender respondsToSelector:@selector(selectedRange)]) {
     return YES;
   }
 
+  // Avoid calling selectedRange while deciding direct vs marked policy. That
+  // crosses the IMK XPC boundary and can block for seconds during focus/input
+  // mode transitions. Direct input is started provisionally; the actual input
+  // path still validates ranges and can force marked text if the client cannot
+  // keep up.
   return NO;
 }
 
