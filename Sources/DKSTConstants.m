@@ -44,7 +44,7 @@ NSArray *DKSTDefaultMarkedTextAppBundleIDs(void) {
                        @"com.google.Chrome.canary", @"com.microsoft.edgemac",
                        @"com.openai.chat", @"com.openai.codex",
                        @"com.google.android.studio", @"com.google.antigravity",
-                       @"com.dinkisstyle.translatorai",
+                       @"com.adobe.*", @"com.dinkisstyle.translatorai",
                        @"com.dinkisstyle.terminalai",
                        @"com.dinkisstyle.nametagmaker",
                        @"com.dinkisstyle.llmchat", @"com.dinkisstyle.mdbrowser",

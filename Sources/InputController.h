@@ -67,6 +67,7 @@
 - (NSString *)bundleIdentifierForClient:(id)sender;
 - (void)forceMarkedTextForClient:(id)sender reason:(NSString *)reason;
 - (BOOL)shouldUseMarkedTextForClient:(id)sender;
+- (BOOL)bundleIdentifierMatchesMarkedTextConfiguration:(NSString *)bundleID;
 - (BOOL)bundleIdentifierUsesWebKitTextStack:(NSString *)bundleID;
 - (BOOL)shouldAvoidEagerSyncForClient:(id)sender;
 - (BOOL)shouldTrustDirectCompositionRangeForClient:(id)sender;
