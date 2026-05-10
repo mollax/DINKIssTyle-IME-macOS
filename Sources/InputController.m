@@ -2075,81 +2075,55 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       ![self shouldTrustDirectCompositionRangeForClient:sender]) {
     @try {
       NSRange selectedRange = [sender selectedRange];
-      BOOL selectedRangeMatches = selectedRange.location != NSNotFound &&
-                                  selectedRange.length == 0 &&
-                                  selectedRange.location == expectedLocation;
-      NSRange composedRange = NSMakeRange(NSNotFound, 0);
-      if (replacementStart != NSNotFound) {
-        composedRange =
-            NSMakeRange(replacementStart + commitLength, composedLength);
-      } else if (selectedRange.location != NSNotFound &&
-                 selectedRange.location >= composedLength) {
-        composedRange = NSMakeRange(selectedRange.location - composedLength,
-                                    composedLength);
-      }
-
-      BOOL checkedComposedRange = NO;
-      BOOL composedRangeIsCurrent = NO;
-      if (composedRange.location != NSNotFound &&
-          [sender
-              respondsToSelector:@selector(attributedSubstringFromRange:)]) {
-        NSTimeInterval attrStart = [NSDate timeIntervalSinceReferenceDate];
-        NSAttributedString *textInRange =
-            [sender attributedSubstringFromRange:composedRange];
-        checkedComposedRange = YES;
-        composedRangeIsCurrent =
-            [[textInRange string] isEqualToString:composed];
-        DKSTDiag(@"event=%lu update-direct verify selected=%@ expected=%lu "
-                 @"selectedOK=%@ composedRange=%@ attrKind=%@ "
-                 @"attrElapsed=%.3fms current=%@",
-                 (unsigned long)_debugEventSerial, DKSTRangeLog(selectedRange),
-                 (unsigned long)expectedLocation,
-                 DKSTBoolLog(selectedRangeMatches), DKSTRangeLog(composedRange),
-                 DKSTTextKindLog([textInRange string]),
-                 ([NSDate timeIntervalSinceReferenceDate] - attrStart) * 1000.0,
-                 DKSTBoolLog(composedRangeIsCurrent));
-      }
-
-      BOOL directInsertionFailed =
-          !selectedRangeMatches ||
-          (checkedComposedRange && !composedRangeIsCurrent);
-      if (directInsertionFailed) {
-        NSString *reason = selectedRangeMatches
-                               ? @"direct insert text mismatch"
-                               : @"direct insert cursor mismatch";
-        NSRange recoveryRange = NSMakeRange(NSNotFound, 0);
-        if (replacementStart != NSNotFound &&
-            selectedRange.location != NSNotFound &&
-            selectedRange.location >= replacementStart) {
-          NSUInteger leakedLength = selectedRange.location - replacementStart;
-          NSUInteger maxRecoverableLength =
-              replacementRange.length + [replacement length];
-          if (leakedLength > 0 && (maxRecoverableLength == 0 ||
-                                   leakedLength <= maxRecoverableLength)) {
-            recoveryRange = NSMakeRange(replacementStart, leakedLength);
-          }
-        }
-        if (recoveryRange.location == NSNotFound && composedRangeIsCurrent) {
-          recoveryRange = composedRange;
+      if (selectedRange.location == NSNotFound ||
+          selectedRange.location != expectedLocation) {
+        NSRange composedRange = NSMakeRange(NSNotFound, 0);
+        if (replacementStart != NSNotFound) {
+          composedRange =
+              NSMakeRange(replacementStart + commitLength, composedLength);
+        } else if (selectedRange.location != NSNotFound &&
+                   selectedRange.location >= composedLength) {
+          composedRange = NSMakeRange(selectedRange.location - composedLength,
+                                      composedLength);
         }
 
-        if (recoveryRange.location != NSNotFound) {
-          [self setMarkedReplacementRange:recoveryRange];
-          [self forceMarkedTextForClient:sender reason:reason];
+        BOOL composedRangeIsCurrent = NO;
+        if (composedRange.location != NSNotFound &&
+            [sender
+                respondsToSelector:@selector(attributedSubstringFromRange:)]) {
+          NSTimeInterval attrStart = [NSDate timeIntervalSinceReferenceDate];
+          NSAttributedString *textInRange =
+              [sender attributedSubstringFromRange:composedRange];
+          composedRangeIsCurrent =
+              [[textInRange string] isEqualToString:composed];
+          DKSTDiag(@"event=%lu update-direct mismatch selected=%@ expected=%lu "
+                   @"composedRange=%@ attrKind=%@ attrElapsed=%.3fms current=%@",
+                   (unsigned long)_debugEventSerial,
+                   DKSTRangeLog(selectedRange), (unsigned long)expectedLocation,
+                   DKSTRangeLog(composedRange),
+                   DKSTTextKindLog([textInRange string]),
+                   ([NSDate timeIntervalSinceReferenceDate] - attrStart) *
+                       1000.0,
+                   DKSTBoolLog(composedRangeIsCurrent));
+        }
+
+        if (composedRangeIsCurrent) {
+          [self setMarkedReplacementRange:composedRange];
+          [self forceMarkedTextForClient:sender
+                                  reason:@"direct insert cursor mismatch"];
           _directInputComposedLength = 0;
           [_directInputComposedText release];
           _directInputComposedText = nil;
           _directInputComposedRange = NSMakeRange(NSNotFound, 0);
           [self updateComposition:sender];
-          DKSTDiag(@"event=%lu update-direct promoted-to-marked reason=%@ "
-                   @"recoveryRange=%@ elapsed=%.3fms",
-                   (unsigned long)_debugEventSerial, reason,
-                   DKSTRangeLog(recoveryRange),
+          DKSTDiag(@"event=%lu update-direct promoted-to-marked elapsed=%.3fms",
+                   (unsigned long)_debugEventSerial,
                    ([NSDate timeIntervalSinceReferenceDate] - start) * 1000.0);
           return;
         }
 
-        [self forceMarkedTextForClient:sender reason:reason];
+        [self forceMarkedTextForClient:sender
+                                reason:@"direct insert cursor mismatch"];
         DKSTLog(@"Keeping current direct composition; marked text starts on "
                 @"next composition update");
       }

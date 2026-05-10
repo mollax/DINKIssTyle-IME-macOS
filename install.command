@@ -141,7 +141,7 @@ function choose_icon_and_install() {
     echo "7. '앙' (Ang) 큰버젼"
     echo "8. 뒤로 돌아가기 (Back)"
     echo "=========================================="
-    read -p "원하는 작업의 번호를 입력하세요 [1-6]: " ICON_CHOICE
+    read -p "원하는 작업의 번호를 입력하세요 [1-8]: " ICON_CHOICE
 
     case $ICON_CHOICE in
         1)
