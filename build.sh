@@ -127,7 +127,7 @@ cat > build/DKSTPreferences.app/Contents/Info.plist <<EOF
     <key>CFBundleName</key>
     <string>DKST Preferences</string>
     <key>CFBundleIconFile</key>
-    <string>DKST</string>
+    <string>DKST_pref</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
@@ -142,7 +142,7 @@ set_plist_string build/DKSTPreferences.app/Contents/Info.plist CFBundleVersion "
 set_plist_string build/DKSTPreferences.app/Contents/Info.plist DKSTVersionDisplay "$DKST_VERSION_DISPLAY"
 
 # Copy Icon
-cp Resources/DKST.icns build/DKSTPreferences.app/Contents/Resources/
+cp Resources/DKST_pref.icns build/DKSTPreferences.app/Contents/Resources/
 
 # Copy Prefs app into Input Method Resources
 rm -rf build/DKST.app/Contents/Resources/DKSTPreferences.app
@@ -175,7 +175,7 @@ cat > build/DKSTDictEditor.app/Contents/Info.plist <<EOF
     <key>CFBundleName</key>
     <string>DKST Dictionary Editor</string>
     <key>CFBundleIconFile</key>
-    <string>DKST</string>
+    <string>DKST_dict</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
@@ -189,8 +189,8 @@ set_plist_string build/DKSTDictEditor.app/Contents/Info.plist CFBundleShortVersi
 set_plist_string build/DKSTDictEditor.app/Contents/Info.plist CFBundleVersion "$DKST_BUNDLE_VERSION"
 set_plist_string build/DKSTDictEditor.app/Contents/Info.plist DKSTVersionDisplay "$DKST_VERSION_DISPLAY"
 
-# Copy Icon (Reuse existing icon)
-cp Resources/DKST.icns build/DKSTDictEditor.app/Contents/Resources/
+# Copy Icon
+cp Resources/DKST_dict.icns build/DKSTDictEditor.app/Contents/Resources/
 
 # Copy DictEditor app into Input Method Resources
 rm -rf build/DKST.app/Contents/Resources/DKSTDictEditor.app

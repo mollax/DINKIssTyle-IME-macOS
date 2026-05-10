@@ -5,7 +5,7 @@
 	<key>CFBundleExecutable</key>
 	<string>DKSTDictEditor</string>
 	<key>CFBundleIconFile</key>
-	<string>DKST</string>
+	<string>DKST_dict</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.dinkisstyle.inputmethod.DKST.dicteditor</string>
 	<key>CFBundleName</key>
