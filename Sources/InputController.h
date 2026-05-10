@@ -26,6 +26,7 @@
   BOOL _customShiftEnabled;
   BOOL _hanjaEnabled;
   BOOL _useMarkedTextForAllApps;
+  DKSTHangulKeyboardLayout _hangulKeyboardLayout;
   NSDictionary *_customShiftMappings;
   NSSet *_markedTextBundleIDSet;
   NSMutableString *_markedTextCommittedPrefix;

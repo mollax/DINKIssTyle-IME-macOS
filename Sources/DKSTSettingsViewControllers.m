@@ -62,6 +62,7 @@ static NSDictionary *DKSTIMEInfoPlist() {
 #pragma mark - Tab 1: General Settings
 
 @implementation DKSTGeneralViewController {
+  NSPopUpButton *hangulKeyboardLayoutPopUpButton;
   NSButton *moaJjikiCheckbox;
   NSButton *fullDeleteCheckbox;
   NSButton *hanjaConversionCheckbox;
@@ -86,6 +87,34 @@ static NSDictionary *DKSTIMEInfoPlist() {
   NSTextField *generalHeader = [NSTextField labelWithString:@"일반"];
   generalHeader.font = [NSFont boldSystemFontOfSize:13];
   [stackView addView:generalHeader inGravity:NSStackViewGravityTop];
+
+  NSStackView *layoutRow = [[NSStackView alloc] init];
+  layoutRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+  layoutRow.alignment = NSLayoutAttributeCenterY;
+  layoutRow.spacing = 8;
+
+  NSTextField *layoutLabel = [NSTextField labelWithString:@"한글 자판:"];
+  [layoutLabel.widthAnchor constraintEqualToConstant:70].active = YES;
+  hangulKeyboardLayoutPopUpButton =
+      [[NSPopUpButton alloc] initWithFrame:NSMakeRect(0, 0, 180, 26)
+                                 pullsDown:NO];
+  [hangulKeyboardLayoutPopUpButton addItemWithTitle:@"두벌식"];
+  [[hangulKeyboardLayoutPopUpButton lastItem]
+      setRepresentedObject:kDKSTHangulKeyboardLayoutDubeolsik];
+  [hangulKeyboardLayoutPopUpButton addItemWithTitle:@"세벌식(최종)"];
+  [[hangulKeyboardLayoutPopUpButton lastItem]
+      setRepresentedObject:kDKSTHangulKeyboardLayoutSebeolsik];
+  [hangulKeyboardLayoutPopUpButton addItemWithTitle:@"세벌식(390)"];
+  [[hangulKeyboardLayoutPopUpButton lastItem]
+      setRepresentedObject:kDKSTHangulKeyboardLayoutSebeolsik390];
+  [hangulKeyboardLayoutPopUpButton setTarget:self];
+  [hangulKeyboardLayoutPopUpButton
+      setAction:@selector(changeHangulKeyboardLayout:)];
+
+  [layoutRow addView:layoutLabel inGravity:NSStackViewGravityLeading];
+  [layoutRow addView:hangulKeyboardLayoutPopUpButton
+           inGravity:NSStackViewGravityLeading];
+  [stackView addView:layoutRow inGravity:NSStackViewGravityTop];
 
   moaJjikiCheckbox =
       [NSButton checkboxWithTitle:@"모아치기 (자모 순서 자동 보정)"
@@ -172,6 +201,21 @@ static NSDictionary *DKSTIMEInfoPlist() {
 - (void)refreshState {
   NSUserDefaults *defaults = sharedDefaults();
 
+  NSString *hangulKeyboardLayout =
+      [defaults stringForKey:kDKSTHangulKeyboardLayoutKey];
+  if (![hangulKeyboardLayout
+          isEqualToString:kDKSTHangulKeyboardLayoutSebeolsik] &&
+      ![hangulKeyboardLayout
+          isEqualToString:kDKSTHangulKeyboardLayoutSebeolsik390]) {
+    hangulKeyboardLayout = kDKSTHangulKeyboardLayoutDubeolsik;
+  }
+  NSInteger layoutItemIndex =
+      [hangulKeyboardLayoutPopUpButton
+          indexOfItemWithRepresentedObject:hangulKeyboardLayout];
+  if (layoutItemIndex != -1) {
+    [hangulKeyboardLayoutPopUpButton selectItemAtIndex:layoutItemIndex];
+  }
+
   moaJjikiCheckbox.state = [defaults boolForKey:@"EnableMoaJjiki"]
                                ? NSControlStateValueOn
                                : NSControlStateValueOff;
@@ -194,6 +238,16 @@ static NSDictionary *DKSTIMEInfoPlist() {
           : NSControlStateValueOff;
 
   [self loadHanjaShortcut];
+}
+
+- (IBAction)changeHangulKeyboardLayout:(id)sender {
+  NSString *layout = [[sender selectedItem] representedObject];
+  if (![layout isEqualToString:kDKSTHangulKeyboardLayoutSebeolsik] &&
+      ![layout isEqualToString:kDKSTHangulKeyboardLayoutSebeolsik390]) {
+    layout = kDKSTHangulKeyboardLayoutDubeolsik;
+  }
+  [sharedDefaults() setObject:layout forKey:kDKSTHangulKeyboardLayoutKey];
+  [sharedDefaults() synchronize];
 }
 
 - (void)loadHanjaShortcut {

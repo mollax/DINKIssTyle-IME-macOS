@@ -58,6 +58,13 @@
 - (BOOL)isJong:(unichar)c { return (c >= 0x11A8 && c <= 0x11C2); }
 
 - (unichar)mapFromChar:(unichar)c {
+    if (self.keyboardLayout == DKSTHangulKeyboardLayoutSebeolsik390) {
+        return [self mapSebeolsik390FromChar:c];
+    }
+    if (self.keyboardLayout == DKSTHangulKeyboardLayoutSebeolsikFinal) {
+        return [self mapSebeolsikFinalFromChar:c];
+    }
+
     switch(c) {
         case 'q': return 0x1107; case 'Q': return 0x1108; // ㅂ, ㅃ
         case 'w': return 0x110c; case 'W': return 0x110d; // ㅈ, ㅉ
@@ -91,12 +98,123 @@
     }
 }
 
+- (unichar)mapSebeolsik390FromChar:(unichar)c {
+    switch(c) {
+        // Sebeolsik 390: lower-case entries are unshifted, upper-case entries are shifted.
+        case 'q': return 0x11BA; case 'Q': return 0x11C1; // 종성 ㅅ, ㅍ
+        case 'w': return 0x11AF; case 'W': return 0x11C0; // 종성 ㄹ, ㅌ
+        case 'e': return 0x1167; case 'E': return 0x11BF; // ㅕ, 종성 ㅋ
+        case 'r': return 0x1162; case 'R': return 0x1164; // ㅐ, ㅒ
+        case 't': return 0x1165; case 'T': return ';';    // ㅓ, ;
+
+        case 'a': return 0x11BC; case 'A': return 0x11AE; // 종성 ㅇ, ㄷ
+        case 's': return 0x11AB; case 'S': return 0x11AD; // 종성 ㄴ, ㄶ
+        case 'd': return 0x1175; case 'D': return 0x11B0; // ㅣ, 종성 ㄺ
+        case 'f': return 0x1161; case 'F': return 0x11A9; // ㅏ, 종성 ㄲ
+        case 'g': return 0x1173; case 'G': return '/';    // ㅡ, /
+
+        case 'z': return 0x11B7; case 'Z': return 0x11BE; // 종성 ㅁ, ㅊ
+        case 'x': return 0x11A8; case 'X': return 0x11B9; // 종성 ㄱ, ㅄ
+        case 'c': return 0x1166; case 'C': return 0x11B2; // ㅔ, 종성 ㄼ
+        case 'v': return 0x1169; case 'V': return 0x11B6; // ㅗ, 종성 ㅀ
+        case 'b': return 0x116E; case 'B': return '!';    // ㅜ, !
+
+        case 'y': return 0x1105; case 'Y': return '<';    // 초성 ㄹ, <
+        case 'u': return 0x1103; case 'U': return '7';    // 초성 ㄷ, 7
+        case 'i': return 0x1106; case 'I': return '8';    // 초성 ㅁ, 8
+        case 'o': return 0x110E; case 'O': return '9';    // 초성 ㅊ, 9
+        case 'p': return 0x1111; case 'P': return '>';    // 초성 ㅍ, >
+        case 'h': return 0x1102; case 'H': return '\'';   // 초성 ㄴ, '
+        case 'j': return 0x110B; case 'J': return '4';    // 초성 ㅇ, 4
+        case 'k': return 0x1100; case 'K': return '5';    // 초성 ㄱ, 5
+        case 'l': return 0x110C; case 'L': return '6';    // 초성 ㅈ, 6
+        case ';': return 0x1107; case ':': return ':';    // 초성 ㅂ, :
+        case '\'': return 0x1110; case '"': return '"';   // 초성 ㅌ, "
+        case 'n': return 0x1109; case 'N': return '0';    // 초성 ㅅ, 0
+        case 'm': return 0x1112; case 'M': return '1';    // 초성 ㅎ, 1
+
+        case '1': return 0x11C2; case '!': return 0x11BD; // 종성 ㅎ, ㅈ
+        case '2': return 0x11BB; case '@': return '@';    // 종성 ㅆ, @
+        case '3': return 0x11B8; case '#': return '#';    // 종성 ㅂ, #
+        case '4': return 0x116D; case '$': return '$';    // ㅛ, $
+        case '5': return 0x1172; case '%': return '%';    // ㅠ, %
+        case '6': return 0x1163; case '^': return '^';    // ㅑ, ^
+        case '7': return 0x1168; case '&': return '&';    // ㅖ, &
+        case '8': return 0x1174; case '*': return '*';    // ㅢ, *
+        case '9': return 0x116E; case '(': return '(';    // ㅜ, (
+        case '0': return 0x110F; case ')': return ')';    // 초성 ㅋ, )
+        case '/': return 0x1169; case '?': return '?';    // ㅗ, ?
+        case ',': return ',';    case '<': return '2';
+        case '.': return '.';    case '>': return '3';
+        default: return 0;
+    }
+}
+
+- (unichar)mapSebeolsikFinalFromChar:(unichar)c {
+    switch(c) {
+        // Sebeolsik Final: lower-case entries are unshifted, upper-case entries are shifted.
+        case 'q': return 0x11BA; case 'Q': return 0x11C1; // 종성 ㅅ, ㅍ
+        case 'w': return 0x11AF; case 'W': return 0x11C0; // 종성 ㄹ, ㅌ
+        case 'e': return 0x1167; case 'E': return 0x11AC; // ㅕ, 종성 ㄵ
+        case 'r': return 0x1162; case 'R': return 0x11B6; // ㅐ, 종성 ㅀ
+        case 't': return 0x1165; case 'T': return 0x11B3; // ㅓ, 종성 ㄽ
+
+        case 'a': return 0x11BC; case 'A': return 0x11AE; // 종성 ㅇ, ㄷ
+        case 's': return 0x11AB; case 'S': return 0x11AD; // 종성 ㄴ, ㄶ
+        case 'd': return 0x1175; case 'D': return 0x11B2; // ㅣ, 종성 ㄼ
+        case 'f': return 0x1161; case 'F': return 0x11B1; // ㅏ, 종성 ㄻ
+        case 'g': return 0x1173; case 'G': return 0x1164; // ㅡ, ㅒ
+
+        case 'z': return 0x11B7; case 'Z': return 0x11BE; // 종성 ㅁ, ㅊ
+        case 'x': return 0x11A8; case 'X': return 0x11B9; // 종성 ㄱ, ㅄ
+        case 'c': return 0x1166; case 'C': return 0x11BF; // ㅔ, 종성 ㅋ
+        case 'v': return 0x1169; case 'V': return 0x11AA; // ㅗ, 종성 ㄳ
+        case 'b': return 0x116E; case 'B': return '?';    // ㅜ, ?
+
+        case 'y': return 0x1105; case 'Y': return '5';    // 초성 ㄹ, 5
+        case 'u': return 0x1103; case 'U': return '6';    // 초성 ㄷ, 6
+        case 'i': return 0x1106; case 'I': return '7';    // 초성 ㅁ, 7
+        case 'o': return 0x110E; case 'O': return '8';    // 초성 ㅊ, 8
+        case 'p': return 0x1111; case 'P': return '9';    // 초성 ㅍ, 9
+        case 'h': return 0x1102; case 'H': return '0';    // 초성 ㄴ, 0
+        case 'j': return 0x110B; case 'J': return '1';    // 초성 ㅇ, 1
+        case 'k': return 0x1100; case 'K': return '2';    // 초성 ㄱ, 2
+        case 'l': return 0x110C; case 'L': return '3';    // 초성 ㅈ, 3
+        case ';': return 0x1107; case ':': return '4';    // 초성 ㅂ, 4
+        case '\'': return 0x1110; case '"': return 0x00B7; // 초성 ㅌ, ·
+        case 'n': return 0x1109; case 'N': return '-';    // 초성 ㅅ, -
+        case 'm': return 0x1112; case 'M': return '"';    // 초성 ㅎ, "
+
+        case '1': return 0x11C2; case '!': return 0x11A9; // 종성 ㅎ, ㄲ
+        case '2': return 0x11BB; case '@': return 0x11B0; // 종성 ㅆ, ㄺ
+        case '3': return 0x11B8; case '#': return 0x11BD; // 종성 ㅂ, ㅈ
+        case '4': return 0x116D; case '$': return 0x11B5; // ㅛ, 종성 ㄿ
+        case '5': return 0x1172; case '%': return 0x11B4; // ㅠ, 종성 ㄾ
+        case '6': return 0x1163; case '^': return '=';    // ㅑ, =
+        case '7': return 0x1168; case '&': return 0x201C; // ㅖ, “
+        case '8': return 0x1174; case '*': return 0x201D; // ㅢ, ”
+        case '9': return 0x116E; case '(': return '\'';   // ㅜ, '
+        case '0': return 0x110F; case ')': return '~';    // 초성 ㅋ, ~
+        case '`': return '*';    case '~': return 0x203B; // *, ※
+        case '-': return ')';    case '_': return ';';
+        case '=': return '>';    case '+': return '+';
+        case '[': return '(';    case '{': return '%';
+        case ']': return '<';    case '}': return '/';
+        case '\\': return ':';   case '|': return '\\';
+        case '/': return 0x1169; case '?': return '!';    // ㅗ, !
+        case ',': return ',';    case '<': return ',';
+        case '.': return '.';    case '>': return '.';
+        default: return 0;
+    }
+}
+
 - (unichar)currentSyllable {
     if (_cho == 0 && _jung == 0 && _jong == 0) return 0;
     
     // Independent Jamo
     if (_cho && !_jung && !_jong) return [self compatibilityJamo:_cho];
     if (!_cho && _jung && !_jong) return [self compatibilityJamo:_jung];
+    if (!_cho && !_jung && _jong) return [self compatibilityJamo:_jong];
     
     // Combined
     int choIdx = -1;
@@ -140,7 +258,43 @@
         };
         return map[u - 0x1161];
     }
+    if (u >= 0x11A8 && u <= 0x11C2) {
+        return [self compatibilityJamoForJong:u];
+    }
     return u;
+}
+
+- (unichar)compatibilityJamoForJong:(unichar)u {
+    switch (u) {
+        case 0x11A8: return 0x3131; // ㄱ
+        case 0x11A9: return 0x3132; // ㄲ
+        case 0x11AA: return 0x3133; // ㄳ
+        case 0x11AB: return 0x3134; // ㄴ
+        case 0x11AC: return 0x3135; // ㄵ
+        case 0x11AD: return 0x3136; // ㄶ
+        case 0x11AE: return 0x3137; // ㄷ
+        case 0x11AF: return 0x3139; // ㄹ
+        case 0x11B0: return 0x313A; // ㄺ
+        case 0x11B1: return 0x313B; // ㄻ
+        case 0x11B2: return 0x313C; // ㄼ
+        case 0x11B3: return 0x313D; // ㄽ
+        case 0x11B4: return 0x313E; // ㄾ
+        case 0x11B5: return 0x313F; // ㄿ
+        case 0x11B6: return 0x3140; // ㅀ
+        case 0x11B7: return 0x3141; // ㅁ
+        case 0x11B8: return 0x3142; // ㅂ
+        case 0x11B9: return 0x3144; // ㅄ
+        case 0x11BA: return 0x3145; // ㅅ
+        case 0x11BB: return 0x3146; // ㅆ
+        case 0x11BC: return 0x3147; // ㅇ
+        case 0x11BD: return 0x3148; // ㅈ
+        case 0x11BE: return 0x314A; // ㅊ
+        case 0x11BF: return 0x314B; // ㅋ
+        case 0x11C0: return 0x314C; // ㅌ
+        case 0x11C1: return 0x314D; // ㅍ
+        case 0x11C2: return 0x314E; // ㅎ
+        default: return u;
+    }
 }
 
 - (int)choIndex:(unichar)c {
@@ -221,11 +375,26 @@
         return NO;
     }
     
+    if (![self isCho:hangul] && ![self isJong:hangul] && ![self isJung:hangul]) {
+        if (_cho || _jung || _jong) {
+            [_completed appendFormat:@"%C", [self currentSyllable]];
+            _cho = 0; _jung = 0; _jong = 0;
+        }
+        [_completed appendFormat:@"%C", hangul];
+        return YES;
+    }
+
     if ([self isCho:hangul]) {
         if (_jung == 0) {
              // State: Cho only or Empty
              if (_cho == 0) { _cho = hangul; }
              else { 
+                 unichar compoundCho = [self combineCho:_cho second:hangul];
+                 if (self.keyboardLayout != DKSTHangulKeyboardLayoutDubeolsik &&
+                     compoundCho) {
+                     _cho = compoundCho;
+                     return YES;
+                 }
                  // Flush prev Cho, start new
                  [_completed appendFormat:@"%C", [self compatibilityJamo:_cho]];
                  _cho = hangul;
@@ -247,6 +416,11 @@
                 }
                 
                 // Normal Case: Cho+Jung + Cho -> Check Jongseong
+                if (self.keyboardLayout != DKSTHangulKeyboardLayoutDubeolsik) {
+                    [_completed appendFormat:@"%C", [self currentSyllable]];
+                    _cho = hangul; _jung = 0; _jong = 0;
+                    return YES;
+                }
                 unichar asJong = [self choToJong:hangul];
                 if (asJong) {
                     _jong = asJong;
@@ -256,6 +430,12 @@
                     _cho = hangul; _jung = 0; _jong = 0;
                 }
             } else { // Cho+Jung+Jong
+                if (self.keyboardLayout != DKSTHangulKeyboardLayoutDubeolsik) {
+                    [_completed appendFormat:@"%C", [self currentSyllable]];
+                    _cho = hangul; _jung = 0; _jong = 0;
+                    return YES;
+                }
+
                 // Compound Jongseong?
                 unichar compound = [self combineJong:_jong second:[self choToJong:hangul]];
                 if (compound) {
@@ -267,8 +447,33 @@
                 }
             }
         }
+    } else if ([self isJong:hangul]) {
+        if (_cho && _jung) {
+            if (_jong == 0) {
+                _jong = hangul;
+            } else {
+                unichar compound = [self combineJong:_jong second:hangul];
+                if (compound) {
+                    _jong = compound;
+                } else {
+                    [_completed appendFormat:@"%C", [self currentSyllable]];
+                    _cho = 0; _jung = 0; _jong = hangul;
+                }
+            }
+        } else {
+            if (_cho || _jung || _jong) {
+                [_completed appendFormat:@"%C", [self currentSyllable]];
+            }
+            _cho = 0; _jung = 0; _jong = hangul;
+        }
     } else if ([self isJung:hangul]) {
         if (_jong) {
+            if (self.keyboardLayout != DKSTHangulKeyboardLayoutDubeolsik) {
+                [_completed appendFormat:@"%C", [self currentSyllable]];
+                _cho = 0; _jung = hangul; _jong = 0;
+                return YES;
+            }
+
             // Cho+Jung+Jong + Jung -> Move Jong to next Cho
             unichar j1 = 0, j2 = 0;
             [self splitJong:_jong first:&j1 second:&j2];
@@ -336,7 +541,38 @@
     if (code == 45) return shift ? 'N' : 'n';
     if (code == 46) return shift ? 'M' : 'm';
     
-    return 0; 
+    if (code == 50) return shift ? '~' : '`';
+    if (code == 18) return shift ? '!' : '1';
+    if (code == 19) return shift ? '@' : '2';
+    if (code == 20) return shift ? '#' : '3';
+    if (code == 21) return shift ? '$' : '4';
+    if (code == 23) return shift ? '%' : '5';
+    if (code == 22) return shift ? '^' : '6';
+    if (code == 26) return shift ? '&' : '7';
+    if (code == 28) return shift ? '*' : '8';
+    if (code == 25) return shift ? '(' : '9';
+    if (code == 29) return shift ? ')' : '0';
+    if (code == 27) return shift ? '_' : '-';
+    if (code == 24) return shift ? '+' : '=';
+    if (code == 33) return shift ? '{' : '[';
+    if (code == 30) return shift ? '}' : ']';
+    if (code == 42) return shift ? '|' : '\\';
+    if (code == 41) return shift ? ':' : ';';
+    if (code == 39) return shift ? '"' : '\'';
+    if (code == 44) return shift ? '?' : '/';
+    if (code == 43) return shift ? '<' : ',';
+    if (code == 47) return shift ? '>' : '.';
+    
+    return 0;
+}
+
+- (unichar)combineCho:(unichar)a second:(unichar)b {
+    if (a == 0x1100 && b == 0x1100) return 0x1101; // ㄱ + ㄱ = ㄲ
+    if (a == 0x1103 && b == 0x1103) return 0x1104; // ㄷ + ㄷ = ㄸ
+    if (a == 0x1107 && b == 0x1107) return 0x1108; // ㅂ + ㅂ = ㅃ
+    if (a == 0x1109 && b == 0x1109) return 0x110A; // ㅅ + ㅅ = ㅆ
+    if (a == 0x110C && b == 0x110C) return 0x110D; // ㅈ + ㅈ = ㅉ
+    return 0;
 }
 
 - (unichar)choToJong:(unichar)c {

@@ -29,6 +29,10 @@ NSString *const kDKSTEnglishKeyboardKey = @"DKSTEnglishKeyboard";
 NSString *const kDKSTHangulKeyboardKey = @"DKSTHangulKeyboard";
 NSString *const kDKSTHangulOrderCorrectionKey = @"DKSTHangulOrderCorrection";
 NSString *const kDKSTQwertyEmulationEnableKey = @"DKSTQwertyEmulationEnable";
+NSString *const kDKSTHangulKeyboardLayoutKey = @"DKSTHangulKeyboardLayout";
+NSString *const kDKSTHangulKeyboardLayoutDubeolsik = @"dubeolsik";
+NSString *const kDKSTHangulKeyboardLayoutSebeolsik = @"sebeolsik";
+NSString *const kDKSTHangulKeyboardLayoutSebeolsik390 = @"sebeolsik-390";
 NSString *const kDKSTMarkedTextAppBundleIDsKey = @"DKSTMarkedTextAppBundleIDs";
 NSString *const kDKSTUseMarkedTextForAllAppsKey =
     @"DKSTUseMarkedTextForAllApps";

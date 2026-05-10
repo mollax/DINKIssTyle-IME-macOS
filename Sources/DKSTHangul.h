@@ -1,5 +1,11 @@
 #import <Foundation/Foundation.h>
 
+typedef NS_ENUM(NSInteger, DKSTHangulKeyboardLayout) {
+    DKSTHangulKeyboardLayoutDubeolsik = 0,
+    DKSTHangulKeyboardLayoutSebeolsikFinal,
+    DKSTHangulKeyboardLayoutSebeolsik390
+};
+
 @interface DKSTHangul : NSObject
 
 // 현재 조합 중인 글자 (Preedit String)
@@ -15,6 +21,7 @@
 
 @property (nonatomic, assign) BOOL moaJjikiEnabled;
 @property (nonatomic, assign) BOOL fullCharacterDelete;
+@property (nonatomic, assign) DKSTHangulKeyboardLayout keyboardLayout;
 
 
 @end
