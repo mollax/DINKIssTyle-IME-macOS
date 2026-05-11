@@ -1570,7 +1570,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   }
 }
 
-- (void)updateDirectComposition:(id)sender {
+- (BOOL)updateDirectComposition:(id)sender {
   NSString *commit = [engine commitString];
   NSString *composed = [engine composedString];
   NSUInteger commitLength = [commit length];
@@ -1614,12 +1614,16 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
           selectedRange.location != expectedLocation) {
         [self forceMarkedTextForClient:sender
                                 reason:@"direct insert cursor mismatch"];
-        DKSTLog(@"Keeping current direct composition; marked text starts on next composition update");
+        DKSTLog(@"Direct insert mismatch: expected %lu, got %lu",
+                (unsigned long)expectedLocation,
+                (unsigned long)selectedRange.location);
+        return NO;
       }
     } @catch (NSException *exception) {
       DKSTLog(@"Exception checking direct insert result: %@", exception);
       [self forceMarkedTextForClient:sender
                               reason:@"direct insert selectedRange exception"];
+      return NO;
     }
   }
 
@@ -1634,22 +1638,43 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   _directInputComposedRange = [_compositionState inlineRange];
   [self clearMarkedReplacementRange];
   [self rememberSelectedRangeForClient:sender];
+
+  return YES;
 }
 
 - (void)updateInlineForClient:(id)sender {
-  if (_useMarkedTextForClient) {
-    if (_markedReplacementRange.location == NSNotFound &&
-        _directInputComposedRange.location != NSNotFound) {
-      [self setMarkedReplacementRange:_directInputComposedRange];
+  if (!_useMarkedTextForClient) {
+    BOOL directOK = [self updateDirectComposition:sender];
+    if (!directOK) {
+      DKSTLog(@"Direct composition failed; switching to marked text for "
+              @"current composition");
+      _useMarkedTextForClient = YES;
+
+      // Migrate direct composition state to marked text
+      if (_directInputComposedRange.location != NSNotFound) {
+        [self setMarkedReplacementRange:_directInputComposedRange];
+      }
+      _directInputComposedLength = 0;
+      [_directInputComposedText release];
+      _directInputComposedText = nil;
+      _directInputComposedRange = NSMakeRange(NSNotFound, 0);
+
+      // Re-update using marked text mode immediately
+      [self updateComposition:sender];
     }
-    _directInputComposedLength = 0;
-    [_directInputComposedText release];
-    _directInputComposedText = nil;
-    _directInputComposedRange = NSMakeRange(NSNotFound, 0);
-    [self updateComposition:sender];
-  } else {
-    [self updateDirectComposition:sender];
+    return;
   }
+
+  // Marked text path
+  if (_markedReplacementRange.location == NSNotFound &&
+      _directInputComposedRange.location != NSNotFound) {
+    [self setMarkedReplacementRange:_directInputComposedRange];
+  }
+  _directInputComposedLength = 0;
+  [_directInputComposedText release];
+  _directInputComposedText = nil;
+  _directInputComposedRange = NSMakeRange(NSNotFound, 0);
+  [self updateComposition:sender];
 }
 
 - (void)commitComposition:(id)sender {
