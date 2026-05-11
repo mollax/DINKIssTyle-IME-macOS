@@ -1,6 +1,7 @@
 #import "InputController.h"
 #import "DKSTConstants.h"
 #import "DKSTHanjaDictionary.h"
+#import <objc/message.h>
 
 @interface InputController ()
 - (BOOL)handleCandidateNavigation:(unsigned short)keyCode client:(id)sender;
@@ -13,26 +14,36 @@
 - (BOOL)processHangulInput:(NSEvent *)event
                    keyCode:(unsigned short)keyCode
                     client:(id)sender
-        candidatesVisible:(BOOL)candidatesVisible;
+         candidatesVisible:(BOOL)candidatesVisible;
 - (BOOL)directInputRangeIsCurrent:(NSRange)range client:(id)sender;
 - (BOOL)repairFirstMarkedTextLeakForClient:(id)sender
-                                    keyCode:(unsigned short)keyCode
-                                  modifiers:(NSUInteger)modifiers
-                        selectedRangeBefore:(NSRange)selectedRangeBefore;
+                                   keyCode:(unsigned short)keyCode
+                                 modifiers:(NSUInteger)modifiers
+                       selectedRangeBefore:(NSRange)selectedRangeBefore;
 @end
 
 static NSInteger DKSTCandidateIndexForNumberKeyCode(unsigned short keyCode) {
   switch (keyCode) {
-  case kDKSTKeyCodeNum1: return 0;
-  case kDKSTKeyCodeNum2: return 1;
-  case kDKSTKeyCodeNum3: return 2;
-  case kDKSTKeyCodeNum4: return 3;
-  case kDKSTKeyCodeNum5: return 4;
-  case kDKSTKeyCodeNum6: return 5;
-  case kDKSTKeyCodeNum7: return 6;
-  case kDKSTKeyCodeNum8: return 7;
-  case kDKSTKeyCodeNum9: return 8;
-  default: return -1;
+  case kDKSTKeyCodeNum1:
+    return 0;
+  case kDKSTKeyCodeNum2:
+    return 1;
+  case kDKSTKeyCodeNum3:
+    return 2;
+  case kDKSTKeyCodeNum4:
+    return 3;
+  case kDKSTKeyCodeNum5:
+    return 4;
+  case kDKSTKeyCodeNum6:
+    return 5;
+  case kDKSTKeyCodeNum7:
+    return 6;
+  case kDKSTKeyCodeNum8:
+    return 7;
+  case kDKSTKeyCodeNum9:
+    return 8;
+  default:
+    return -1;
   }
 }
 
@@ -40,33 +51,60 @@ static NSString *DKSTRomanStringForHangulKeyCode(unsigned short keyCode,
                                                  NSUInteger modifiers) {
   BOOL shift = (modifiers & NSEventModifierFlagShift) != 0;
   switch (keyCode) {
-  case 0:  return shift ? @"A" : @"a";
-  case 1:  return shift ? @"S" : @"s";
-  case 2:  return shift ? @"D" : @"d";
-  case 3:  return shift ? @"F" : @"f";
-  case 4:  return shift ? @"H" : @"h";
-  case 5:  return shift ? @"G" : @"g";
-  case 6:  return shift ? @"Z" : @"z";
-  case 7:  return shift ? @"X" : @"x";
-  case 8:  return shift ? @"C" : @"c";
-  case 9:  return shift ? @"V" : @"v";
-  case 11: return shift ? @"B" : @"b";
-  case 12: return shift ? @"Q" : @"q";
-  case 13: return shift ? @"W" : @"w";
-  case 14: return shift ? @"E" : @"e";
-  case 15: return shift ? @"R" : @"r";
-  case 16: return shift ? @"Y" : @"y";
-  case 17: return shift ? @"T" : @"t";
-  case 31: return shift ? @"O" : @"o";
-  case 32: return shift ? @"U" : @"u";
-  case 34: return shift ? @"I" : @"i";
-  case 35: return shift ? @"P" : @"p";
-  case 37: return shift ? @"L" : @"l";
-  case 38: return shift ? @"J" : @"j";
-  case 40: return shift ? @"K" : @"k";
-  case 45: return shift ? @"N" : @"n";
-  case 46: return shift ? @"M" : @"m";
-  default: return nil;
+  case 0:
+    return shift ? @"A" : @"a";
+  case 1:
+    return shift ? @"S" : @"s";
+  case 2:
+    return shift ? @"D" : @"d";
+  case 3:
+    return shift ? @"F" : @"f";
+  case 4:
+    return shift ? @"H" : @"h";
+  case 5:
+    return shift ? @"G" : @"g";
+  case 6:
+    return shift ? @"Z" : @"z";
+  case 7:
+    return shift ? @"X" : @"x";
+  case 8:
+    return shift ? @"C" : @"c";
+  case 9:
+    return shift ? @"V" : @"v";
+  case 11:
+    return shift ? @"B" : @"b";
+  case 12:
+    return shift ? @"Q" : @"q";
+  case 13:
+    return shift ? @"W" : @"w";
+  case 14:
+    return shift ? @"E" : @"e";
+  case 15:
+    return shift ? @"R" : @"r";
+  case 16:
+    return shift ? @"Y" : @"y";
+  case 17:
+    return shift ? @"T" : @"t";
+  case 31:
+    return shift ? @"O" : @"o";
+  case 32:
+    return shift ? @"U" : @"u";
+  case 34:
+    return shift ? @"I" : @"i";
+  case 35:
+    return shift ? @"P" : @"p";
+  case 37:
+    return shift ? @"L" : @"l";
+  case 38:
+    return shift ? @"J" : @"j";
+  case 40:
+    return shift ? @"K" : @"k";
+  case 45:
+    return shift ? @"N" : @"n";
+  case 46:
+    return shift ? @"M" : @"m";
+  default:
+    return nil;
   }
 }
 
@@ -111,10 +149,9 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     if (@available(macOS 26, *)) {
       @synchronized([InputController class]) {
         if (!DKSTSharedCandidatesForMacOS26) {
-          DKSTSharedCandidatesForMacOS26 =
-              [[IMKCandidates alloc]
-                  initWithServer:server
-                       panelType:kIMKSingleColumnScrollingCandidatePanel];
+          DKSTSharedCandidatesForMacOS26 = [[IMKCandidates alloc]
+              initWithServer:server
+                   panelType:kIMKSingleColumnScrollingCandidatePanel];
         }
         _candidates = DKSTSharedCandidatesForMacOS26;
       }
@@ -256,7 +293,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     if (sender && [sender respondsToSelector:@selector(bundleIdentifier)]) {
       bundleID = [sender bundleIdentifier];
     }
-    if (!bundleID && [[self client] respondsToSelector:@selector(bundleIdentifier)]) {
+    if (!bundleID &&
+        [[self client] respondsToSelector:@selector(bundleIdentifier)]) {
       bundleID = [[self client] bundleIdentifier];
     }
   } @catch (NSException *exception) {
@@ -321,8 +359,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   }
 
   NSArray *webkitBundlePrefixes =
-      [NSArray arrayWithObjects:@"com.apple.Safari",
-                                @"com.apple.WebKit",
+      [NSArray arrayWithObjects:@"com.apple.Safari", @"com.apple.WebKit",
                                 @"com.apple.mobilesafari", nil];
 
   for (NSString *prefix in webkitBundlePrefixes) {
@@ -414,11 +451,11 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       return YES;
     }
     if ([frameworkName rangeOfString:@"Chromium"
-                             options:NSCaseInsensitiveSearch].location !=
-            NSNotFound ||
+                             options:NSCaseInsensitiveSearch]
+                .location != NSNotFound ||
         [frameworkName rangeOfString:@"Electron"
-                             options:NSCaseInsensitiveSearch].location !=
-            NSNotFound) {
+                             options:NSCaseInsensitiveSearch]
+                .location != NSNotFound) {
       [_chromiumDetectionCache setObject:[NSNumber numberWithBool:YES]
                                   forKey:bundlePath];
       return YES;
@@ -448,9 +485,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       [NSRunningApplication runningApplicationsWithBundleIdentifier:bundleID];
   for (NSRunningApplication *app in runningApps) {
     NSString *appName = [[app localizedName] lowercaseString];
-    NSString *bundleName =
-        [[[[app bundleURL] lastPathComponent] stringByDeletingPathExtension]
-            lowercaseString];
+    NSString *bundleName = [[[[app bundleURL] lastPathComponent]
+        stringByDeletingPathExtension] lowercaseString];
     if ([appName isEqualToString:@"comet"] ||
         [bundleName isEqualToString:@"comet"] ||
         [appName isEqualToString:@"atlas"] ||
@@ -489,8 +525,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   @try {
     if ([sender respondsToSelector:@selector(selectedRange)]) {
       NSRange selectedRange = [sender selectedRange];
-      if (selectedRange.location != NSNotFound &&
-          selectedRange.length == 0 &&
+      if (selectedRange.location != NSNotFound && selectedRange.length == 0 &&
           selectedRange.location < NSMaxRange(range)) {
         return NO;
       }
@@ -507,8 +542,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       }
     }
   } @catch (NSException *exception) {
-    DKSTLog(@"Stale direct input range %@: %@",
-            NSStringFromRange(range), exception);
+    DKSTLog(@"Stale direct input range %@: %@", NSStringFromRange(range),
+            exception);
     return NO;
   }
 
@@ -528,8 +563,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
   @try {
     NSRange selectedRange = [sender selectedRange];
-    if (selectedRange.location != NSNotFound &&
-        selectedRange.length == 0 &&
+    if (selectedRange.location != NSNotFound && selectedRange.length == 0 &&
         selectedRange.location >= _directInputComposedLength) {
       NSRange selectedBacktrackRange =
           NSMakeRange(selectedRange.location - _directInputComposedLength,
@@ -620,7 +654,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 }
 
 - (NSString *)hangulTextForHanjaConversion:(id)sender
-                                      range:(NSRange *)outRange {
+                                     range:(NSRange *)outRange {
   _hanjaMarkedPrefixLength = 0;
   _hanjaReplacementUsesMarkedPrefix = NO;
 
@@ -660,8 +694,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       if ([matches count] > 0) {
         if (outRange) {
           NSRange compositionRange = [self compositionReplacementRange:sender];
-          *outRange = NSMakeRange(compositionRange.location,
-                                  [candidateText length]);
+          *outRange =
+              NSMakeRange(compositionRange.location, [candidateText length]);
         }
         _hanjaMarkedPrefixLength =
             [candidateText length] > [composed length]
@@ -714,8 +748,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 }
 
 - (BOOL)showHanjaCandidatesForText:(NSString *)text
-                   replacementRange:(NSRange)replacementRange
-                             client:(id)sender {
+                  replacementRange:(NSRange)replacementRange
+                            client:(id)sender {
   if ([text length] == 0 || replacementRange.location == NSNotFound ||
       replacementRange.length == 0) {
     return NO;
@@ -781,16 +815,16 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
   // Check textDocument proxy first (standard IMK behavior)
   if (textDocument && [textDocument respondsToSelector:showsComposingTextSel]) {
-    BOOL showsMarked =
-        ((BOOL(*)(id, SEL))[textDocument methodForSelector:showsComposingTextSel])(
-            textDocument, showsComposingTextSel);
+    BOOL showsMarked = ((BOOL (*)(
+        id, SEL))[textDocument methodForSelector:showsComposingTextSel])(
+        textDocument, showsComposingTextSel);
     return showsMarked;
   }
 
   // Fallback: Check sender directly (some apps might implement it)
   if ([sender respondsToSelector:showsComposingTextSel]) {
     BOOL showsMarked =
-        ((BOOL(*)(id, SEL))[sender methodForSelector:showsComposingTextSel])(
+        ((BOOL (*)(id, SEL))[sender methodForSelector:showsComposingTextSel])(
             sender, showsComposingTextSel);
     return showsMarked;
   }
@@ -874,9 +908,9 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 }
 
 - (BOOL)repairFirstMarkedTextLeakForClient:(id)sender
-                                    keyCode:(unsigned short)keyCode
-                                  modifiers:(NSUInteger)modifiers
-                        selectedRangeBefore:(NSRange)selectedRangeBefore {
+                                   keyCode:(unsigned short)keyCode
+                                 modifiers:(NSUInteger)modifiers
+                       selectedRangeBefore:(NSRange)selectedRangeBefore {
   if (!_useMarkedTextForClient || !sender ||
       _markedReplacementRange.location != NSNotFound ||
       _directInputComposedLength != 0 ||
@@ -973,8 +1007,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
 - (BOOL)hasPendingComposition {
   return [[engine composedString] length] > 0 ||
-          _directInputComposedLength > 0 ||
-          _markedReplacementRange.location != NSNotFound;
+         _directInputComposedLength > 0 ||
+         _markedReplacementRange.location != NSNotFound;
 }
 
 - (void)setMarkedReplacementRange:(NSRange)range {
@@ -1047,7 +1081,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       NSRange selectedRange = [sender selectedRange];
       if (selectedRange.location != NSNotFound &&
           !NSEqualRanges(selectedRange, _lastClientSelectedRange)) {
-        DKSTLog(@"Selection changed during composition; next key starts a new direct composition");
+        DKSTLog(@"Selection changed during composition; next key starts a new "
+                @"direct composition");
         [self resetCompositionState];
         [sender setMarkedText:@""
                selectionRange:NSMakeRange(0, 0)
@@ -1080,7 +1115,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     _hanjaEnabled = YES;
   }
 
-  NSDictionary *mappings = [defaults dictionaryForKey:@"DKSTCustomShiftMappings"];
+  NSDictionary *mappings =
+      [defaults dictionaryForKey:@"DKSTCustomShiftMappings"];
   if (_customShiftMappings != mappings) {
     [_customShiftMappings release];
     _customShiftMappings = [mappings copy];
@@ -1148,6 +1184,16 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
   [self reloadUserPreferences];
   [self refreshMarkedTextPolicyForClient:sender];
+
+  // Optimize XPC Timeout: Reduce synchronous wait time to prevent IME hangs.
+  // This utilizes internal IPMDServerClientWrapper API found in IMK.
+  SEL timeoutSel = NSSelectorFromString(@"setReplyTimeout:");
+  if ([sender respondsToSelector:timeoutSel]) {
+    // 0.1 seconds is usually enough for a healthy app but prevents long hangs.
+    ((void (*)(id, SEL, double))objc_msgSend)(sender, timeoutSel, 0.1);
+    DKSTLog(@"Optimized client XPC replyTimeout to 0.1s for %@",
+            [self bundleIdentifierForClient:sender]);
+  }
 
   // Ensure clean state and force Hangul mode on activation
   [self resetCompositionState];
@@ -1235,7 +1281,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   if (keyCode == kDKSTKeyCodePageUp) {
     if (hasCandidates) {
       _currentHanjaIndex -= 9;
-      if (_currentHanjaIndex < 0) _currentHanjaIndex = 0;
+      if (_currentHanjaIndex < 0)
+        _currentHanjaIndex = 0;
       [_candidates performSelector:@selector(pageUp:) withObject:sender];
     }
     return YES;
@@ -1300,8 +1347,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   NSString *conversionText =
       [self hangulTextForHanjaConversion:sender range:&conversionRange];
   return [self showHanjaCandidatesForText:conversionText
-                        replacementRange:conversionRange
-                                  client:sender];
+                         replacementRange:conversionRange
+                                   client:sender];
 }
 
 - (BOOL)handleCustomShift:(unsigned short)keyCode
@@ -1313,26 +1360,65 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 
   NSString *lookupKey = nil;
   switch (keyCode) {
-  case 16:  lookupKey = @"y (ㅛ)"; break;
-  case 32:  lookupKey = @"u (ㅕ)"; break;
-  case 34:  lookupKey = @"i (ㅑ)"; break;
-  case 0:   lookupKey = @"a (ㅁ)"; break;
-  case 1:   lookupKey = @"s (ㄴ)"; break;
-  case 2:   lookupKey = @"d (ㅇ)"; break;
-  case 3:   lookupKey = @"f (ㄹ)"; break;
-  case 5:   lookupKey = @"g (ㅎ)"; break;
-  case 4:   lookupKey = @"h (ㅗ)"; break;
-  case 38:  lookupKey = @"j (ㅓ)"; break;
-  case 40:  lookupKey = @"k (ㅏ)"; break;
-  case 37:  lookupKey = @"l (ㅣ)"; break;
-  case 6:   lookupKey = @"z (ㅋ)"; break;
-  case 7:   lookupKey = @"x (ㅌ)"; break;
-  case 8:   lookupKey = @"c (ㅊ)"; break;
-  case 9:   lookupKey = @"v (ㅍ)"; break;
-  case 11:  lookupKey = @"b (ㅠ)"; break;
-  case 45:  lookupKey = @"n (ㅜ)"; break;
-  case 46:  lookupKey = @"m (ㅡ)"; break;
-  default:  break;
+  case 16:
+    lookupKey = @"y (ㅛ)";
+    break;
+  case 32:
+    lookupKey = @"u (ㅕ)";
+    break;
+  case 34:
+    lookupKey = @"i (ㅑ)";
+    break;
+  case 0:
+    lookupKey = @"a (ㅁ)";
+    break;
+  case 1:
+    lookupKey = @"s (ㄴ)";
+    break;
+  case 2:
+    lookupKey = @"d (ㅇ)";
+    break;
+  case 3:
+    lookupKey = @"f (ㄹ)";
+    break;
+  case 5:
+    lookupKey = @"g (ㅎ)";
+    break;
+  case 4:
+    lookupKey = @"h (ㅗ)";
+    break;
+  case 38:
+    lookupKey = @"j (ㅓ)";
+    break;
+  case 40:
+    lookupKey = @"k (ㅏ)";
+    break;
+  case 37:
+    lookupKey = @"l (ㅣ)";
+    break;
+  case 6:
+    lookupKey = @"z (ㅋ)";
+    break;
+  case 7:
+    lookupKey = @"x (ㅌ)";
+    break;
+  case 8:
+    lookupKey = @"c (ㅊ)";
+    break;
+  case 9:
+    lookupKey = @"v (ㅍ)";
+    break;
+  case 11:
+    lookupKey = @"b (ㅠ)";
+    break;
+  case 45:
+    lookupKey = @"n (ㅜ)";
+    break;
+  case 46:
+    lookupKey = @"m (ㅡ)";
+    break;
+  default:
+    break;
   }
 
   if (!lookupKey) {
@@ -1353,7 +1439,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 - (BOOL)processHangulInput:(NSEvent *)event
                    keyCode:(unsigned short)keyCode
                     client:(id)sender
-        candidatesVisible:(BOOL)candidatesVisible {
+         candidatesVisible:(BOOL)candidatesVisible {
   NSUInteger previousComposedLength = 0;
   NSRange selectedRangeBefore = NSMakeRange(NSNotFound, 0);
   if (_useMarkedTextForClient) {
@@ -1384,8 +1470,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       NSString *commit = [engine commitString];
       if ([commit length] > 0) {
         [self commitMarkedText:commit
-        previousComposedLength:previousComposedLength
-                        client:sender];
+            previousComposedLength:previousComposedLength
+                            client:sender];
       }
       // REMOVED: repairFirstMarkedTextLeakForClient call (Phase 1 Method 3)
       // This heuristic was found to cause issues in some applications.
@@ -1421,7 +1507,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender {
   unsigned short keyCode = [event keyCode];
 
-  // Item 6: KIM pattern - Reset buffer for events other than KeyDown/FlagsChanged
+  // Item 6: KIM pattern - Reset buffer for events other than
+  // KeyDown/FlagsChanged
   if ([event type] != NSEventTypeKeyDown) {
     if ([event type] != NSEventTypeFlagsChanged) {
       [self resetCompositionState];
@@ -1559,7 +1646,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     if ([_markedTextCommittedPrefix length] > 20) {
       [_markedTextCommittedPrefix
           deleteCharactersInRange:NSMakeRange(
-                                      0, [_markedTextCommittedPrefix length] - 20)];
+                                      0, [_markedTextCommittedPrefix length] -
+                                             20)];
     }
   }
 
@@ -1602,9 +1690,10 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
       if ([sender respondsToSelector:@selector(markedRange)]) {
         NSRange markedRange = [sender markedRange];
         if (markedRange.location == NSNotFound || markedRange.length == 0) {
-          DKSTLog(@"Inline inconsistent: markedRange not set after setMarkedText "
-                  @"for %@",
-                  [self bundleIdentifierForClient:sender]);
+          DKSTLog(
+              @"Inline inconsistent: markedRange not set after setMarkedText "
+              @"for %@",
+              [self bundleIdentifierForClient:sender]);
         }
       }
     } @catch (NSException *exception) {
