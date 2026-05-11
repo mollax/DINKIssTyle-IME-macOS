@@ -1036,15 +1036,9 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     [self refreshMarkedTextPolicyForClient:sender];
   }
 
-  if (clientChanged && _useMarkedTextForClient) {
-    @try {
-      [sender setMarkedText:@""
-             selectionRange:NSMakeRange(0, 0)
-           replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
-    } @catch (NSException *exception) {
-      DKSTLog(@"Exception clearing new client marked text: %@", exception);
-    }
-  }
+  // REMOVED: Forced setMarkedText:@"" on client change (Phase 1 Method 3)
+  // This was found to cause input issues in some applications.
+  // commitComposition: already handles state cleanup.
 
   if (!_useMarkedTextForClient && [self hasPendingComposition] &&
       _lastClientSelectedRange.location != NSNotFound &&
@@ -1393,13 +1387,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
         previousComposedLength:previousComposedLength
                         client:sender];
       }
-      if (previousComposedLength == 0 &&
-          [[engine composedString] length] > 0) {
-        [self repairFirstMarkedTextLeakForClient:sender
-                                         keyCode:keyCode
-                                       modifiers:[event modifierFlags]
-                             selectedRangeBefore:selectedRangeBefore];
-      }
+      // REMOVED: repairFirstMarkedTextLeakForClient call (Phase 1 Method 3)
+      // This heuristic was found to cause issues in some applications.
     }
     [self updateInlineForClient:sender];
     return YES;
@@ -1529,9 +1518,11 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     }
   }
 
+  // Item 4: Always use NSNotFound for replacementRange to let IMK handle it
+  // unless a specific replacement range is already set.
   NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
-  if (previousComposedLength > 0) {
-    replacementRange = NSMakeRange(0, previousComposedLength);
+  if (_markedReplacementRange.location != NSNotFound) {
+    replacementRange = _markedReplacementRange;
   }
 
   @try {
@@ -1725,6 +1716,11 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   if ([finalText length] > 0) {
     [sender insertText:finalText
         replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+  } else {
+    // Only if nothing was inserted, clear marked text explicitly
+    [sender setMarkedText:@""
+           selectionRange:NSMakeRange(0, 0)
+         replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
   }
 
   [engine reset];
@@ -1734,9 +1730,6 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   _directInputComposedRange = NSMakeRange(NSNotFound, 0);
   [self clearMarkedReplacementRange];
   [_markedTextCommittedPrefix setString:@""];
-  [sender setMarkedText:@""
-         selectionRange:NSMakeRange(0, 0)
-       replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
   [self rememberSelectedRangeForClient:sender];
 }
 
