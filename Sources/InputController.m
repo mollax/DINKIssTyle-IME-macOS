@@ -1551,6 +1551,21 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     [sender setMarkedText:attrString
            selectionRange:NSMakeRange([composed length], 0)
          replacementRange:_markedReplacementRange];
+
+    // Item 3: Check for inline consistency (KIM's inlineInconsistent pattern)
+    @try {
+      if ([sender respondsToSelector:@selector(markedRange)]) {
+        NSRange markedRange = [sender markedRange];
+        if (markedRange.location == NSNotFound || markedRange.length == 0) {
+          DKSTLog(@"Inline inconsistent: markedRange not set after setMarkedText "
+                  @"for %@",
+                  [self bundleIdentifierForClient:sender]);
+        }
+      }
+    } @catch (NSException *exception) {
+      DKSTLog(@"Exception checking inline consistency: %@", exception);
+    }
+
     [self rememberSelectedRangeForClient:sender];
   } else {
     [sender setMarkedText:@""
