@@ -765,9 +765,34 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   }
 
   // 1. Apple Native Private API Query (마크드 텍스트 네이티브 지원 여부 확인)
-  SEL showsComposingTextSel = NSSelectorFromString(@"showsComposingTextAsMarkedText");
+  //    KIM queries textDocument.showsComposingTextAsMarkedText (§4.1, §4.4)
+  //    Try textDocument (via self) first, then sender as fallback.
+  SEL showsComposingTextSel =
+      NSSelectorFromString(@"showsComposingTextAsMarkedText");
+  SEL textDocSel = NSSelectorFromString(@"textDocument");
+
+  // textDocument proxy first (matches KIM's IMKActiveCompositionController)
+  if ([self respondsToSelector:textDocSel]) {
+    id textDocument =
+        ((id (*)(id, SEL))[self methodForSelector:textDocSel])(self,
+                                                               textDocSel);
+    if (textDocument &&
+        [textDocument respondsToSelector:showsComposingTextSel]) {
+      BOOL showsMarked =
+          ((BOOL (*)(id, SEL))[textDocument
+              methodForSelector:showsComposingTextSel])(
+              textDocument, showsComposingTextSel);
+      DKSTLog(@"textDocument.showsComposingTextAsMarkedText = %d",
+              showsMarked);
+      return showsMarked;
+    }
+  }
+
+  // Fallback: check sender (client proxy) directly
   if ([sender respondsToSelector:showsComposingTextSel]) {
-    BOOL showsMarked = ((BOOL (*)(id, SEL))[sender methodForSelector:showsComposingTextSel])(sender, showsComposingTextSel);
+    BOOL showsMarked =
+        ((BOOL (*)(id, SEL))[sender methodForSelector:showsComposingTextSel])(
+            sender, showsComposingTextSel);
     return showsMarked;
   }
 
@@ -1404,9 +1429,15 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender {
   unsigned short keyCode = [event keyCode];
 
-  // Filter out everything but KeyDown (fixes Option release bug closing
-  // candidates)
+  // §6: KIM pattern — keyDown only; other event types trigger buffer reset
+  //     (§3 _handleEvent: step 2: keyDown/keyUp 이외 → resetBufferAndEngine:)
   if ([event type] != NSEventTypeKeyDown) {
+    if ([event type] != NSEventTypeFlagsChanged &&
+        [self hasPendingComposition]) {
+      DKSTLog(@"Non-key event type %lu; resetting composition",
+              (unsigned long)[event type]);
+      [self commitComposition:sender];
+    }
     return NO;
   }
 
@@ -1437,6 +1468,26 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
                     NSEventModifierFlagOption)) != 0) {
     [self commitComposition:sender];
     return NO;
+  }
+
+  // §7: Control character safety net (KIM: u_iscntrl → commit + pass through)
+  //     Catches C0 control codes not handled by individual key checks below.
+  @try {
+    NSString *chars = [event characters];
+    if ([chars length] > 0) {
+      unichar ch = [chars characterAtIndex:0];
+      if ((ch < 0x20 || ch == 0x7F) &&
+          keyCode != kDKSTKeyCodeTab && keyCode != kDKSTKeyCodeBackspace &&
+          keyCode != kDKSTKeyCodeReturn && keyCode != kDKSTKeyCodeSpace &&
+          keyCode != kDKSTKeyCodeEscape) {
+        if ([self hasPendingComposition]) {
+          [self commitComposition:sender];
+        }
+        return NO;
+      }
+    }
+  } @catch (NSException *exception) {
+    DKSTLog(@"Exception checking control characters: %@", exception);
   }
 
   // 4. Tab — commit and pass through
@@ -1501,9 +1552,13 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     }
   }
 
+  // §4 Fix: Use _markedReplacementRange when available; otherwise let IMK
+  // resolve the marked text range automatically via NSNotFound.
+  // The previous NSMakeRange(0, previousComposedLength) was interpreted by
+  // some clients as an absolute document range, causing text corruption.
   NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
-  if (previousComposedLength > 0) {
-    replacementRange = NSMakeRange(0, previousComposedLength);
+  if (_markedReplacementRange.location != NSNotFound) {
+    replacementRange = _markedReplacementRange;
   }
 
   @try {
@@ -1532,6 +1587,32 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     [sender setMarkedText:attrString
            selectionRange:NSMakeRange([composed length], 0)
          replacementRange:_markedReplacementRange];
+
+    // §3: Inline inconsistency check (KIM: inlineInconsistent pattern)
+    // Verify the client actually accepted the marked text. Some custom text
+    // fields and Electron apps silently ignore setMarkedText, causing the
+    // next keystroke to lose the previous jamo (받침 누락).
+    @try {
+      if ([sender respondsToSelector:@selector(markedRange)]) {
+        NSRange markedRange = [sender markedRange];
+        if (markedRange.location == NSNotFound ||
+            markedRange.length == 0) {
+          DKSTLog(@"Inline inconsistent: markedRange empty after "
+                  @"setMarkedText (expected length %lu)",
+                  (unsigned long)[composed length]);
+          // Retry with NSNotFound in case _markedReplacementRange was stale
+          if (_markedReplacementRange.location != NSNotFound) {
+            [self clearMarkedReplacementRange];
+            [sender setMarkedText:attrString
+                   selectionRange:NSMakeRange([composed length], 0)
+                 replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+          }
+        }
+      }
+    } @catch (NSException *exception) {
+      DKSTLog(@"Exception checking inline consistency: %@", exception);
+    }
+
     [self rememberSelectedRangeForClient:sender];
   } else {
     [sender setMarkedText:@""
@@ -1542,12 +1623,13 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   }
 }
 
-- (void)updateDirectComposition:(id)sender {
+- (BOOL)updateDirectComposition:(id)sender {
   NSString *commit = [engine commitString];
   NSString *composed = [engine composedString];
   NSUInteger commitLength = [commit length];
   NSUInteger composedLength = [composed length];
   NSMutableString *replacement = [NSMutableString string];
+  BOOL success = YES;
 
   if (commitLength > 0) {
     [replacement appendString:commit];
@@ -1578,6 +1660,8 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     expectedLocation = replacementStart + commitLength + composedLength;
   }
 
+  // §2: Detect cursor mismatch and signal failure so updateInlineForClient
+  // can clean up stale direct-input state immediately.
   if (expectedLocation != NSNotFound && composedLength > 0 &&
       ![self shouldTrustDirectCompositionRangeForClient:sender]) {
     @try {
@@ -1586,12 +1670,15 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
           selectedRange.location != expectedLocation) {
         [self forceMarkedTextForClient:sender
                                 reason:@"direct insert cursor mismatch"];
-        DKSTLog(@"Keeping current direct composition; marked text starts on next composition update");
+        DKSTLog(@"Direct composition cursor mismatch; will use marked "
+                @"text from next update");
+        success = NO;
       }
     } @catch (NSException *exception) {
       DKSTLog(@"Exception checking direct insert result: %@", exception);
       [self forceMarkedTextForClient:sender
                               reason:@"direct insert selectedRange exception"];
+      success = NO;
     }
   }
 
@@ -1606,6 +1693,7 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   _directInputComposedRange = [_compositionState inlineRange];
   [self clearMarkedReplacementRange];
   [self rememberSelectedRangeForClient:sender];
+  return success;
 }
 
 - (void)updateInlineForClient:(id)sender {
@@ -1620,7 +1708,17 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     _directInputComposedRange = NSMakeRange(NSNotFound, 0);
     [self updateComposition:sender];
   } else {
-    [self updateDirectComposition:sender];
+    // §2: If direct composition fails (cursor mismatch), clean up stale
+    // direct-input tracking so the next keystroke starts fresh with the
+    // marked text path (forceMarkedTextForClient already set the flag).
+    if (![self updateDirectComposition:sender]) {
+      DKSTLog(@"Direct composition failed; cleaning up for marked text");
+      _directInputComposedLength = 0;
+      [_directInputComposedText release];
+      _directInputComposedText = nil;
+      _directInputComposedRange = NSMakeRange(NSNotFound, 0);
+      [_compositionState resetTransientRanges];
+    }
   }
 }
 
@@ -1652,13 +1750,6 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   NSString *composed = [engine composedString]; // Should be empty after reset
                                                 // usually, unless engine splits
 
-  // In simple engine, commitString usually consumes all.
-  // If engine has composed string, force commit it.
-  // Wait, SimpleEngine 'commitString' getter clears 'completed'.
-  // 'composedString' comes from _cho/_jung/_jong. We should flush composed to
-  // commit.
-
-  // Hard reset engine to flush
   // Insert text in correct order: Completed first, then Composed
   NSString *finalText = @"";
   if ([commit length] > 0 && [composed length] > 0) {
@@ -1669,9 +1760,17 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     finalText = composed;
   }
 
+  // §5 Fix: insertText:replacementRange: with NSNotFound automatically
+  // replaces the current marked text per IMK protocol. Only call
+  // setMarkedText:@"" when there's nothing to insert (to clear stale
+  // marked text without double-processing).
   if ([finalText length] > 0) {
     [sender insertText:finalText
         replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+  } else {
+    [sender setMarkedText:@""
+           selectionRange:NSMakeRange(0, 0)
+         replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
   }
 
   [engine reset];
@@ -1681,9 +1780,6 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
   _directInputComposedRange = NSMakeRange(NSNotFound, 0);
   [self clearMarkedReplacementRange];
   [_markedTextCommittedPrefix setString:@""];
-  [sender setMarkedText:@""
-         selectionRange:NSMakeRange(0, 0)
-       replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
   [self rememberSelectedRangeForClient:sender];
 }
 

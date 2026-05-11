@@ -34,4 +34,7 @@ cat > "$CONTENTS/Info.plist" <<EOF
 </plist>
 EOF
 
+echo "Signing $APP_DIR with stable designated requirement..."
+codesign --force --sign - --requirements '=designated => identifier "com.dinkisstyle.inputmethod.DKST.imetester"' "$APP_DIR"
+
 echo "Built $APP_DIR"

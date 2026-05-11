@@ -36,7 +36,7 @@
 }
 
 - (void)updateComposition:(id)sender;
-- (void)updateDirectComposition:(id)sender;
+- (BOOL)updateDirectComposition:(id)sender;
 - (void)updateInlineForClient:(id)sender;
 - (void)commitMarkedText:(NSString *)commit
     previousComposedLength:(NSUInteger)previousComposedLength
