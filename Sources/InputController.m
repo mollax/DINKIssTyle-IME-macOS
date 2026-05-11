@@ -1421,9 +1421,11 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender {
   unsigned short keyCode = [event keyCode];
 
-  // Filter out everything but KeyDown (fixes Option release bug closing
-  // candidates)
+  // Item 6: KIM pattern - Reset buffer for events other than KeyDown/FlagsChanged
   if ([event type] != NSEventTypeKeyDown) {
+    if ([event type] != NSEventTypeFlagsChanged) {
+      [self resetCompositionState];
+    }
     return NO;
   }
 
