@@ -1501,10 +1501,53 @@ static IMKCandidates *DKSTSharedCandidatesForMacOS26;
     return NO;
   }
 
-  // 6. Enter/Space without candidates — commit and pass through
-  if ((keyCode == kDKSTKeyCodeReturn || keyCode == kDKSTKeyCodeSpace) &&
-      !candidatesVisible) {
+  // 6. Enter — commit and pass through
+  if (keyCode == kDKSTKeyCodeReturn && !candidatesVisible) {
     [self commitComposition:sender];
+    return NO;
+  }
+
+  // 6b. Space — KIM pattern: commit composed text + Space atomically
+  if (keyCode == kDKSTKeyCodeSpace && !candidatesVisible) {
+    if ([self hasPendingComposition]) {
+      NSString *commit = [engine commitString];
+      NSString *composed = [engine composedString];
+      NSMutableString *finalText = [NSMutableString string];
+
+      if ([commit length] > 0) {
+        [finalText appendString:commit];
+      }
+      if ([composed length] > 0) {
+        [finalText appendString:composed];
+      }
+      [finalText appendString:@" "];
+
+      NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
+      if (!_useMarkedTextForClient &&
+          _directInputComposedRange.location != NSNotFound) {
+        replacementRange = [self directInputReplacementRange:sender];
+      }
+
+      @try {
+        [sender insertText:finalText replacementRange:replacementRange];
+      } @catch (NSException *exception) {
+        DKSTLog(@"Exception inserting Space commit: %@", exception);
+        [sender insertText:finalText
+            replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+      }
+
+      [engine reset];
+      _directInputComposedLength = 0;
+      [_directInputComposedText release];
+      _directInputComposedText = nil;
+      _directInputComposedRange = NSMakeRange(NSNotFound, 0);
+      [self clearMarkedReplacementRange];
+      [_markedTextCommittedPrefix setString:@""];
+      [self rememberSelectedRangeForClient:sender];
+
+      return YES;
+    }
+
     return NO;
   }
 
