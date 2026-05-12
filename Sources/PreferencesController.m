@@ -216,7 +216,7 @@
           description];
     }
     if ([version length] == 0) {
-      version = @"2.0(beta4)";
+      version = @"2.0.0(beta4)";
     }
 
     NSTextField *versionLabel = [[[NSTextField alloc]

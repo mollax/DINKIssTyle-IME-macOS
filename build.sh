@@ -21,8 +21,8 @@ set_plist_string() {
 
 # Interactive build mode selection
 echo "=========================================="
-echo "       DKST 빌드 도우미"
-echo "       Version: ${DKST_VERSION_DISPLAY}"
+echo "    DKST macOS 한글입력기 빌드 도우미"
+echo "    빌드 버젼: ${DKST_VERSION_DISPLAY}"
 echo "=========================================="
 echo "1. Debug 빌드 (개발용)"
 echo "2. Release 빌드 (배포용)"
