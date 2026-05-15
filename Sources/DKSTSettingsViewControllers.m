@@ -27,6 +27,11 @@ static NSString *DKSTAppleScriptDoubleQuotedString(NSString *value) {
   return escaped;
 }
 
+static BOOL DKSTDictionaryEntryIsSeparator(NSDictionary *entry) {
+  return [[entry objectForKey:@"separator"] boolValue] ||
+         [[entry objectForKey:@"trigger"] isEqualToString:@"###DKST"];
+}
+
 static NSArray *DKSTIMEInfoPlistCandidatePaths() {
   NSMutableArray *paths = [NSMutableArray array];
   NSBundle *mainBundle = [NSBundle mainBundle];
@@ -612,7 +617,8 @@ static NSDictionary *DKSTIMEInfoPlist() {
       [allEntries
           addObject:[NSMutableDictionary
                         dictionaryWithObjectsAndKeys:@"###DKST", @"trigger",
-                                                     @"--- 사용자 데이터 구분선 ---", @"values", nil]];
+                                                     @"사용자 데이터", @"values",
+                                                     @YES, @"separator", nil]];
     }
   }
   filteredEntries = [allEntries mutableCopy];
@@ -654,13 +660,86 @@ static NSDictionary *DKSTIMEInfoPlist() {
 - (id)tableView:(NSTableView *)tableView
     objectValueForTableColumn:(NSTableColumn *)tableColumn
                           row:(NSInteger)row {
-  return filteredEntries[row][tableColumn.identifier];
+  NSDictionary *entry = filteredEntries[row];
+  if (DKSTDictionaryEntryIsSeparator(entry)) {
+    if ([tableColumn.identifier isEqualToString:@"trigger"]) {
+      return @"";
+    }
+    return @"──────── 사용자 데이터 ────────";
+  }
+  return entry[tableColumn.identifier];
 }
+
+- (BOOL)tableView:(NSTableView *)tableView
+    shouldEditTableColumn:(NSTableColumn *)tableColumn
+                      row:(NSInteger)row {
+  if (row < 0 || row >= filteredEntries.count) {
+    return NO;
+  }
+  return !DKSTDictionaryEntryIsSeparator(filteredEntries[row]);
+}
+
+- (BOOL)tableView:(NSTableView *)tableView shouldSelectRow:(NSInteger)row {
+  if (row < 0 || row >= filteredEntries.count) {
+    return NO;
+  }
+  return !DKSTDictionaryEntryIsSeparator(filteredEntries[row]);
+}
+
+- (CGFloat)tableView:(NSTableView *)aTableView heightOfRow:(NSInteger)row {
+  if (row >= 0 && row < filteredEntries.count &&
+      DKSTDictionaryEntryIsSeparator(filteredEntries[row])) {
+    return 30.0;
+  }
+  return aTableView.rowHeight;
+}
+
+- (void)tableView:(NSTableView *)tableView
+    willDisplayCell:(id)cell
+     forTableColumn:(NSTableColumn *)tableColumn
+                row:(NSInteger)row {
+  if (row < 0 || row >= filteredEntries.count) {
+    return;
+  }
+
+  if (!DKSTDictionaryEntryIsSeparator(filteredEntries[row])) {
+    if ([cell respondsToSelector:@selector(setEditable:)]) {
+      [cell setEditable:YES];
+    }
+    if ([cell respondsToSelector:@selector(setTextColor:)]) {
+      [cell setTextColor:[NSColor labelColor]];
+    }
+    if ([cell respondsToSelector:@selector(setFont:)]) {
+      [cell setFont:[NSFont systemFontOfSize:[NSFont systemFontSize]]];
+    }
+    if ([cell respondsToSelector:@selector(setAlignment:)]) {
+      [cell setAlignment:NSTextAlignmentNatural];
+    }
+    return;
+  }
+
+  if ([cell respondsToSelector:@selector(setEditable:)]) {
+    [cell setEditable:NO];
+  }
+  if ([cell respondsToSelector:@selector(setTextColor:)]) {
+    [cell setTextColor:[NSColor secondaryLabelColor]];
+  }
+  if ([cell respondsToSelector:@selector(setFont:)]) {
+    [cell setFont:[NSFont boldSystemFontOfSize:12.0]];
+  }
+  if ([cell respondsToSelector:@selector(setAlignment:)]) {
+    [cell setAlignment:NSTextAlignmentCenter];
+  }
+}
+
 - (void)tableView:(NSTableView *)tableView
     setObjectValue:(id)object
     forTableColumn:(NSTableColumn *)tableColumn
                row:(NSInteger)row {
   NSMutableDictionary *entry = filteredEntries[row];
+  if (DKSTDictionaryEntryIsSeparator(entry)) {
+    return;
+  }
   NSString *newValue = (NSString *)object;
 
   // Real-time Correction for "values" column
@@ -713,6 +792,9 @@ static NSDictionary *DKSTIMEInfoPlist() {
 - (void)deleteEntry:(id)sender {
   NSInteger row = tableView.selectedRow;
   if (row >= 0) {
+    if (DKSTDictionaryEntryIsSeparator(filteredEntries[row])) {
+      return;
+    }
     [allEntries removeObject:filteredEntries[row]];
     [filteredEntries removeObjectAtIndex:row];
     [tableView reloadData];
@@ -802,7 +884,7 @@ static NSDictionary *DKSTIMEInfoPlist() {
     NSString *cleanTrigger =
         [trigger stringByReplacingOccurrencesOfString:@":" withString:@""];
 
-    if ([cleanTrigger isEqualToString:@"###DKST"]) {
+    if (DKSTDictionaryEntryIsSeparator(e)) {
       [outS appendFormat:@"\n###DKST\n"];
     } else {
       [outS appendFormat:@"%@:%@\n", cleanTrigger, cleanValues];
