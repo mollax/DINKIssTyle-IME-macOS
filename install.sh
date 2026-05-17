@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO="DINKIssTyle/DINKIssTyle-IME-macOS"
+REPO="mollax/DINKIssTyle-IME-macOS"
 API_URL="https://api.github.com/repos/${REPO}/releases?per_page=100"
 MIN_MACOS_MAJOR=10
 MIN_MACOS_MINOR=15

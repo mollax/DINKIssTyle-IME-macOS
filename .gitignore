@@ -1,6 +1,8 @@
+.idea/
 .DS_Store
 Notes/
-build/IMETester.app
+build/
+dist/
 Tests/
 DINKIssTyle-IME-macOS.code-workspace
 Sources/archive

@@ -9,7 +9,11 @@ if [ -f "${SCRIPT_DIR}/build.config" ]; then
 fi
 
 BUILD_DIR="${SCRIPT_DIR}/build"
-SOURCE_APP="${SCRIPT_DIR}/build/DKST.app"
+if [ -d "${SCRIPT_DIR}/DKST.app" ]; then
+    SOURCE_APP="${SCRIPT_DIR}/DKST.app"
+else
+    SOURCE_APP="${SCRIPT_DIR}/build/DKST.app"
+fi
 DEST_DIR="/Library/Input Methods"
 DEST_APP="${DEST_DIR}/DKST.app"
 PROCESS_NAME="DKST"
@@ -30,10 +34,15 @@ function kill_dkst_process() {
 function clear_build_app_quarantine() {
     echo "빌드 폴더의 앱 번들 확장 속성(quarantine) 제거 중..."
 
-    while IFS= read -r -d '' APP_BUNDLE; do
-        echo " - ${APP_BUNDLE}"
-        xattr -cr "$APP_BUNDLE"
-    done < <(find "$BUILD_DIR" -type d -name "*.app" -print0)
+    if [ -d "$BUILD_DIR" ]; then
+        while IFS= read -r -d '' APP_BUNDLE; do
+            echo " - ${APP_BUNDLE}"
+            xattr -cr "$APP_BUNDLE"
+        done < <(find "$BUILD_DIR" -type d -name "*.app" -print0)
+    else
+        echo " - ${SOURCE_APP}"
+        xattr -cr "$SOURCE_APP"
+    fi
 }
 
 # --- 함수: 설치 대상 앱 존재 확인 ---
@@ -74,7 +83,9 @@ function configure_pdf_icon() {
     fi
 
     echo "${ICON_NAME}을 Hangul.pdf로 적용 중..."
-    cp "$SOURCE_PDF" "${RESOURCE_DIR}/Hangul.pdf"
+    if [ "$SOURCE_PDF" != "${RESOURCE_DIR}/Hangul.pdf" ]; then
+        cp "$SOURCE_PDF" "${RESOURCE_DIR}/Hangul.pdf"
+    fi
 
     plist_delete_if_exists ":TISIconIsTemplate" "$INFO_PLIST"
     plist_delete_if_exists "${INPUT_MODE_PATH}:TISIconLabels" "$INFO_PLIST"
@@ -149,6 +160,17 @@ function install_dkst() {
     SHOW_MESSAGE=true
 }
 
+function bundled_icon_path() {
+    local ICON_FILE="$1"
+
+    if [ -f "${SCRIPT_DIR}/Resources/${ICON_FILE}" ]; then
+        printf '%s\n' "${SCRIPT_DIR}/Resources/${ICON_FILE}"
+        return
+    fi
+
+    printf '%s\n' "${SOURCE_APP}/Contents/Resources/${ICON_FILE}"
+}
+
 # --- 함수: 아이콘 선택 메뉴 ---
 function choose_icon_and_install() {
     clear
@@ -172,7 +194,7 @@ function choose_icon_and_install() {
 
     case $ICON_CHOICE in
         1)
-            configure_pdf_icon "${SCRIPT_DIR}/Resources/Hangul.pdf" "기본 아이콘"
+            configure_pdf_icon "$(bundled_icon_path "Hangul.pdf")" "기본 아이콘"
             install_dkst
             ;;
 
@@ -180,33 +202,33 @@ function choose_icon_and_install() {
             if [ -f "${SCRIPT_DIR}/Resources/ICON-Arae-A-Han.pdf" ]; then
                 configure_pdf_icon "${SCRIPT_DIR}/Resources/ICON-Arae-A-Han.pdf" "아래아 '한' 아이콘"
             else
-                configure_pdf_icon "${SOURCE_APP}/Contents/Resources/Hangul2.pdf" "아래아 '한' 아이콘"
+                configure_pdf_icon "$(bundled_icon_path "ICON-Arae-A-Han.pdf")" "아래아 '한' 아이콘"
             fi
             install_dkst
             ;;
 
         3)
-            configure_pdf_icon "${SCRIPT_DIR}/Resources/ICON-Han.pdf" "'한' 아이콘"
+            configure_pdf_icon "$(bundled_icon_path "ICON-Han.pdf")" "'한' 아이콘"
             install_dkst
             ;;
 
         4)
-            configure_pdf_icon "${SCRIPT_DIR}/Resources/ICON-Ga.pdf" "'가' 아이콘"
+            configure_pdf_icon "$(bundled_icon_path "ICON-Ga.pdf")" "'가' 아이콘"
             install_dkst
             ;;
 
         5)
-            configure_pdf_icon "${SCRIPT_DIR}/Resources/ICON-Classic.pdf" "'클래식' 아이콘"
+            configure_pdf_icon "$(bundled_icon_path "ICON-Classic.pdf")" "'클래식' 아이콘"
             install_dkst
             ;;
 
         6)
-            configure_pdf_icon "${SCRIPT_DIR}/Resources/ICON-ANG.pdf" "'앙' 아이콘"
+            configure_pdf_icon "$(bundled_icon_path "ICON-ANG.pdf")" "'앙' 아이콘"
             install_dkst
             ;;
 
         7)
-            configure_pdf_icon "${SCRIPT_DIR}/Resources/ICON-ANG-Large.pdf" "'앙' 큰버젼 아이콘"
+            configure_pdf_icon "$(bundled_icon_path "ICON-ANG-Large.pdf")" "'앙' 큰버젼 아이콘"
             install_dkst
             ;;
 
@@ -262,7 +284,7 @@ read -p "원하는 작업의 번호를 입력하세요 [1-4]: " CHOICE
 # --- 로직 처리 ---
 case $CHOICE in
     1)
-        configure_pdf_icon "${SCRIPT_DIR}/Resources/Hangul.pdf" "기본 아이콘"
+        configure_pdf_icon "$(bundled_icon_path "Hangul.pdf")" "기본 아이콘"
         install_dkst
         ;;
 
