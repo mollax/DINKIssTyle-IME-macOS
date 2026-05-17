@@ -38,7 +38,7 @@ if [ "$MACOS_MAJOR" -lt "$MIN_MACOS_MAJOR" ] \
 fi
 
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/dkst-install.XXXXXX")"
-ARCHIVE_PATH="${WORK_DIR}/source.zip"
+ARCHIVE_PATH="${WORK_DIR}/DKST.zip"
 EXTRACT_DIR="${WORK_DIR}/release"
 
 cleanup() {
@@ -83,8 +83,9 @@ RELEASE_JSON="$(curl -fsSL \
 RELEASE_INFO="$(printf '%s\n' "$RELEASE_JSON" | awk -v channel="$RELEASE_CHANNEL" '
 function reset_release() {
     tag = ""
-    zip = ""
     prerelease = ""
+    in_assets = 0
+    asset_name = ""
 }
 function json_value(line, value) {
     value = line
@@ -103,25 +104,36 @@ BEGIN {
     sub(/^[^:]*: */, "", prerelease)
     sub(/,? *$/, "", prerelease)
 }
-/"zipball_url":/ {
-    zip = json_value($0)
+/"assets": *\[/ {
+    in_assets = 1
+}
+in_assets && /"name":/ {
+    asset_name = json_value($0)
+}
+in_assets && /"browser_download_url":/ {
+    asset_url = json_value($0)
     is_beta = (tolower(tag) ~ /beta/)
-    if (channel == "stable" && tag != "" && zip != "" &&
-        prerelease == "false" && !is_beta) {
+    is_dkst_zip = (asset_name ~ /^DKST-.*\.zip$/)
+    if (channel == "stable" && tag != "" && asset_url != "" &&
+        prerelease == "false" && !is_beta && is_dkst_zip) {
         print tag
-        print zip
+        print asset_url
+        print asset_name
         exit
     }
-    if (channel == "beta" && tag != "" && zip != "" && is_beta) {
+    if (channel == "beta" && tag != "" && asset_url != "" && is_beta && is_dkst_zip) {
         print tag
-        print zip
+        print asset_url
+        print asset_name
         exit
     }
+    asset_name = ""
 }
 ')"
 
 TAG_NAME="$(printf '%s\n' "$RELEASE_INFO" | sed -n '1p')"
-SOURCE_ZIP_URL="$(printf '%s\n' "$RELEASE_INFO" | sed -n '2p')"
+ASSET_ZIP_URL="$(printf '%s\n' "$RELEASE_INFO" | sed -n '2p')"
+ASSET_NAME="$(printf '%s\n' "$RELEASE_INFO" | sed -n '3p')"
 
 if [ -z "$TAG_NAME" ]; then
     if [ "$RELEASE_CHANNEL" = "beta" ]; then
@@ -132,14 +144,16 @@ if [ -z "$TAG_NAME" ]; then
     exit 1
 fi
 
-if [ -z "$SOURCE_ZIP_URL" ]; then
-    echo "오류: ${TAG_NAME} 릴리즈의 Source code zip 주소를 확인하지 못했습니다."
+if [ -z "$ASSET_ZIP_URL" ]; then
+    echo "오류: ${TAG_NAME} 릴리즈에서 설치용 DKST zip asset을 찾지 못했습니다."
+    echo "릴리즈 asset에 DKST-버전.zip 형식의 파일이 등록되어 있는지 확인해주세요."
     exit 1
 fi
 
 echo "대상 릴리즈: ${TAG_NAME}"
-echo "Source code zip 다운로드 중..."
-curl -fL "$SOURCE_ZIP_URL" -o "$ARCHIVE_PATH"
+echo "설치 파일: ${ASSET_NAME}"
+echo "DKST 설치용 zip 다운로드 중..."
+curl -fL "$ASSET_ZIP_URL" -o "$ARCHIVE_PATH"
 
 echo "압축 해제 중..."
 mkdir -p "$EXTRACT_DIR"
